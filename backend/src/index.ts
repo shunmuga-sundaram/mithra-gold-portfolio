@@ -13,19 +13,6 @@ if (existsSync(join(__dirname, '../.env'))) {
     config({ path: join(__dirname, '../.env') });
 }
 
-if (!process.env.TYPEORM_DATABASE || !process.env.TYPEORM_LOG_QUERY) {
-    process.env.TYPEORM_DATABASE =
-        process.env.TYPEORM_DATABASE || 'play_ground.db';
-    process.env.TYPEORM_LOG_QUERY =
-        process.env.TYPEORM_LOG_QUERY || false.toString();
-
-    console.log(
-        '❗ Caution: Default environment variables in use. ' +
-            'Create a .env file and customize configurations ' +
-            'for optimal security and tailored functionality.\n'
-    );
-}
-
 process.env.SWAGGER_PORT = process.env.SWAGGER_PORT || (5050).toString();
 process.env.SWAGGER_DOMAIN = process.env.SWAGGER_DOMAIN || 'localhost';
 

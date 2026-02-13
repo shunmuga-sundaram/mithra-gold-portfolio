@@ -1,6 +1,5 @@
 import express from 'express';
 import helmet from 'helmet';
-// import cors from 'cors';
 import { AddressInfo } from 'net';
 import { Server } from 'http';
 import {
@@ -8,6 +7,7 @@ import {
     unhandledErrorHandler,
     apiErrorHandler
 } from './middlewares';
+import { corsMiddleware } from './middlewares/cors-middleware';
 import { join } from 'path';
 import swaggerJsdoc from 'swagger-jsdoc';
 import { apiDefintion } from './config/swagger-config';
@@ -43,23 +43,10 @@ export class App {
 
     private init() {
         this.app.use(helmet());
-        // this.app.use(
-        //     cors((request, callback) => {
-        //         const whiteList = process.env.DOMAIN_WHITE_LIST.split(',').map(str =>
-        //             str.trim(),
-        //           );
-        //         const origin = request.headers.origin;
-        //         if (whiteList.indexOf(origin) !== -1 || !origin) {
-        //             callback(null, {
-        //                 origin: true
-        //             })
-        //         } else {
-        //             callback(
-        //                 new DomainRestrictedException(origin)
-        //             );
-        //         }
-        //     })
-        // );
+
+        // Enable CORS for frontend applications
+        this.app.use(corsMiddleware);
+
         this.app.use(express.json({ limit: '50mb' }));
         this.app.use(express.urlencoded({ extended: true }));
 
