@@ -1,0 +1,42 @@
+name: Validate Pull Request
+on:
+  push:
+    branches:
+    - master
+    paths-ignore:
+      - '**/README*.md'
+  pull_request:
+    branches:
+    - master
+    paths-ignore:
+      - '**/README*.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛒 Check Out Repository
+        uses: actions/checkout@v4
+      - name: 💚 Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+      - name: 🧱 Install Dependencies
+        run: npm ci
+      - name: 🧪 Run Tests
+        run: npm test
+      - name: 📦 Build Application
+        run: npm run build
+
+  docker-test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: 🛒 Check Out Repository
+        uses: actions/checkout@v4
+      
+      - name: 🧪🔨 Build and Test Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          target: test
+          load: true
