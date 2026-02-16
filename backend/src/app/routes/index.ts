@@ -5,9 +5,11 @@ import { SampleRouter } from './sample-router';
 import { SampleController } from '../controllers/sample/sample-contoller';
 import { RootRouter } from './root-router';
 import { AuthRouter } from './auth';
+import { MemberRouter } from './member/member-router';
 
 export const route = new RootRouter(
     new SampleRouter(new SampleController()),
     new AppRouter(new AppController(new AppService())),
-    new AuthRouter()    
+    new AuthRouter(),
+    new MemberRouter()
 );

@@ -274,13 +274,6 @@ export function Login() {
             </Button>
           </form>
 
-          {/* DEVELOPMENT HINT */}
-          <div className="mt-4 text-center text-sm text-gray-500">
-            <p>Test credentials:</p>
-            <p className="font-mono text-xs mt-1">
-              admin@mithra.com / Admin@123
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>

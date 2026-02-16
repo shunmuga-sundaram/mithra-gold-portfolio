@@ -1,6 +1,5 @@
 import express from 'express';
 import helmet from 'helmet';
-import { AddressInfo } from 'net';
 import { Server } from 'http';
 import {
     routeErrorHandler,
@@ -24,20 +23,36 @@ export class App {
     }
 
     public listen(): Server {
-        const server = this.app.listen(
-            parseInt(process.env.APP_PORT) || 3000,
-            process.env.APP_URL || 'localhost',
-            () => {
-                const address = (server.address() as AddressInfo).address;
-                const port = (server.address() as AddressInfo).port;
-                console.log(
-                    `Application running on url 📡: http://${address}:${port}/`
-                );
-                console.log(
-                    `Api documentation running on url 📡: http://${address}:${port}/api-docs/`
-                );
+        const port = parseInt(process.env.APP_PORT || '3000');
+        const host = process.env.APP_HOST || '0.0.0.0';
+
+        const server = this.app.listen(port, host, () => {
+            const addr = server.address();
+            if (addr && typeof addr !== 'string') {
+                const address = addr.address === '::' ? 'localhost' : addr.address;
+                const displayAddress = address === '0.0.0.0' ? 'localhost' : address;
+                console.log('\n🚀 Server started successfully!');
+                console.log(`📡 Application running on: http://${displayAddress}:${addr.port}/`);
+                console.log(`📚 API documentation: http://${displayAddress}:${addr.port}/api-docs/`);
+                console.log('');
             }
-        );
+        });
+
+        server.on('error', (error: NodeJS.ErrnoException) => {
+            if (error.code === 'EADDRINUSE') {
+                console.error(`❌ Error: Port ${port} is already in use`);
+                console.error('   Please stop the other process or use a different port');
+                process.exit(1);
+            } else if (error.code === 'EACCES') {
+                console.error(`❌ Error: Permission denied to bind to port ${port}`);
+                console.error('   Try using a port number above 1024');
+                process.exit(1);
+            } else {
+                console.error('❌ Server error:', error);
+                process.exit(1);
+            }
+        });
+
         return server;
     }
 
