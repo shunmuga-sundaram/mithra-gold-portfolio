@@ -1,44 +1,109 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminLayout } from "../../components/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
-import { TrendingUp } from "lucide-react";
+import { Badge } from "../../components/ui/badge";
+import { TrendingUp, Loader2 } from "lucide-react";
+import goldRateService, { GoldRate as GoldRateType, CreateGoldRateDto } from "../../../services/goldRateService";
+import { toast } from "sonner";
 
 export function AdminGoldRate() {
-  const [goldBuyPrice, setGoldBuyPrice] = useState("6550");
-  const [goldSellPrice, setGoldSellPrice] = useState("6600");
-  const [priceHistory, setPriceHistory] = useState([
-    { date: "2026-02-13", time: "10:30 AM", buyPrice: "₹6,550", sellPrice: "₹6,600" },
-    { date: "2026-02-12", time: "02:15 PM", buyPrice: "₹6,520", sellPrice: "₹6,570" },
-    { date: "2026-02-11", time: "09:00 AM", buyPrice: "₹6,495", sellPrice: "₹6,545" },
-    { date: "2026-02-10", time: "11:45 AM", buyPrice: "₹6,510", sellPrice: "₹6,560" },
-    { date: "2026-02-09", time: "03:20 PM", buyPrice: "₹6,480", sellPrice: "₹6,530" },
-  ]);
+  const [goldBuyPrice, setGoldBuyPrice] = useState("");
+  const [goldSellPrice, setGoldSellPrice] = useState("");
+  const [priceHistory, setPriceHistory] = useState<GoldRateType[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const formatINR = (value: string) => {
-    const num = parseFloat(value);
+  // Load data on mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    await Promise.all([loadActiveRate(), loadPriceHistory()]);
+    setPageLoading(false);
+  };
+
+  const loadActiveRate = async () => {
+    try {
+      const rate = await goldRateService.getActiveRate();
+      setGoldBuyPrice(rate.buyPrice.toString());
+      setGoldSellPrice(rate.sellPrice.toString());
+    } catch (error: any) {
+      console.log('No active rate found yet');
+      // Don't show error - it's okay if no rate exists yet
+    }
+  };
+
+  const loadPriceHistory = async (page: number = 1) => {
+    try {
+      const result = await goldRateService.getAllRates(page, 10);
+      setPriceHistory(result.data);
+      setCurrentPage(result.pagination.page);
+      setTotalPages(result.pagination.pages);
+    } catch (error: any) {
+      console.error('Error loading price history:', error);
+      toast.error('Failed to load price history');
+    }
+  };
+
+  const formatINR = (value: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       minimumFractionDigits: 2,
-    }).format(num);
+    }).format(value);
   };
 
-  const handleUpdateRate = (e: React.FormEvent) => {
-    e.preventDefault();
-    const now = new Date();
-    const newEntry = {
-      date: now.toISOString().split("T")[0],
-      time: now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-      buyPrice: formatINR(goldBuyPrice),
-      sellPrice: formatINR(goldSellPrice),
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return {
+      date: date.toISOString().split("T")[0],
+      time: date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
     };
-    setPriceHistory([newEntry, ...priceHistory]);
-    alert(`Gold rates updated!\nBuy Price: ${formatINR(goldBuyPrice)}/g\nSell Price: ${formatINR(goldSellPrice)}/g`);
   };
+
+  const handleUpdateRate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const rateData: CreateGoldRateDto = {
+        buyPrice: parseFloat(goldBuyPrice),
+        sellPrice: parseFloat(goldSellPrice)
+      };
+
+      await goldRateService.createRate(rateData);
+
+      toast.success('Gold rates updated successfully!');
+
+      // Reload data
+      await loadActiveRate();
+      await loadPriceHistory();
+    } catch (error: any) {
+      console.error('Error updating rates:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to update rates';
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (pageLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
+          <span className="ml-2 text-lg">Loading gold rates...</span>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -68,10 +133,11 @@ export function AdminGoldRate() {
                       className="text-2xl h-16 border-0 focus-visible:ring-0"
                       required
                       placeholder="0.00"
+                      disabled={loading}
                     />
                   </div>
                 </div>
-                
+
                 <div className="space-y-3">
                   <Label htmlFor="gold-sell-price" className="text-lg font-semibold">
                     Gold Sell Price (₹ per gram) *
@@ -87,13 +153,26 @@ export function AdminGoldRate() {
                       className="text-2xl h-16 border-0 focus-visible:ring-0"
                       required
                       placeholder="0.00"
+                      disabled={loading}
                     />
                   </div>
                 </div>
               </div>
-              
-              <Button type="submit" size="lg" className="w-full md:w-auto h-16 px-12 text-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
-                Update Rates
+
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full md:w-auto h-16 px-12 text-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Rates'
+                )}
               </Button>
             </form>
           </CardContent>
@@ -104,28 +183,74 @@ export function AdminGoldRate() {
             <CardTitle className="text-xl">Gold Price Update Log</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-amber-100">
-                    <TableHead className="font-semibold">Date</TableHead>
-                    <TableHead className="font-semibold">Time</TableHead>
-                    <TableHead className="font-semibold">Buy Price</TableHead>
-                    <TableHead className="font-semibold">Sell Price</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {priceHistory.map((entry, index) => (
-                    <TableRow key={index} className="hover:bg-amber-50">
-                      <TableCell>{entry.date}</TableCell>
-                      <TableCell>{entry.time}</TableCell>
-                      <TableCell className="font-medium text-green-700">{entry.buyPrice}</TableCell>
-                      <TableCell className="font-medium text-orange-700">{entry.sellPrice}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            {priceHistory.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No price history available. Create your first gold rate above.
+              </div>
+            ) : (
+              <>
+                <div className="rounded-lg border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-amber-100">
+                        <TableHead className="font-semibold">Date</TableHead>
+                        <TableHead className="font-semibold">Time</TableHead>
+                        <TableHead className="font-semibold">Buy Price</TableHead>
+                        <TableHead className="font-semibold">Sell Price</TableHead>
+                        <TableHead className="font-semibold">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {priceHistory.map((entry) => {
+                        const { date, time } = formatDateTime(entry.createdAt);
+                        return (
+                          <TableRow key={entry.id} className="hover:bg-amber-50">
+                            <TableCell>{date}</TableCell>
+                            <TableCell>{time}</TableCell>
+                            <TableCell className="font-medium text-green-700">
+                              {formatINR(entry.buyPrice)}
+                            </TableCell>
+                            <TableCell className="font-medium text-orange-700">
+                              {formatINR(entry.sellPrice)}
+                            </TableCell>
+                            <TableCell>
+                              {entry.isActive && (
+                                <Badge className="bg-green-600 hover:bg-green-700">
+                                  Active
+                                </Badge>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-4 mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => loadPriceHistory(currentPage - 1)}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-gray-600">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      onClick={() => loadPriceHistory(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

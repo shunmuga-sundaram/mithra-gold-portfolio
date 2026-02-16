@@ -6,10 +6,14 @@ import { SampleController } from '../controllers/sample/sample-contoller';
 import { RootRouter } from './root-router';
 import { AuthRouter } from './auth';
 import { MemberRouter } from './member/member-router';
+import { GoldRateRouter } from './gold-rate/gold-rate-router';
+import { TradeRouter } from './trade/trade-router';
 
 export const route = new RootRouter(
     new SampleRouter(new SampleController()),
     new AppRouter(new AppController(new AppService())),
     new AuthRouter(),
-    new MemberRouter()
+    new MemberRouter(),
+    new GoldRateRouter(),
+    new TradeRouter()
 );
