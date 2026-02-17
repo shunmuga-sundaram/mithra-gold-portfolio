@@ -42,13 +42,43 @@ export class TradeController {
 
     /**
      * GET /trades/member/:memberId
-     * Get trades for a specific member
+     * Get trades for a specific member (admin only)
      */
     static async getMemberTrades(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { memberId } = req.params;
             const page = parseInt(req.query.page as string) || 1;
             const limit = parseInt(req.query.limit as string) || 10;
+            const sortBy = (req.query.sortBy as string) || 'createdAt';
+            const sortOrder = (req.query.sortOrder as 'asc' | 'desc') || 'desc';
+
+            const result = await TradeService.getMemberTrades(memberId, {
+                page,
+                limit,
+                sortBy,
+                sortOrder,
+            });
+
+            res.status(200).json(result);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * GET /trades/my-trades
+     * Get trades for the currently logged-in member
+     */
+    static async getMyTrades(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const memberId = req.user?.id;
+
+            if (!memberId) {
+                throw new Error('Member ID not found in token');
+            }
+
+            const page = parseInt(req.query.page as string) || 1;
+            const limit = parseInt(req.query.limit as string) || 100; // Show more trades for members
             const sortBy = (req.query.sortBy as string) || 'createdAt';
             const sortOrder = (req.query.sortOrder as 'asc' | 'desc') || 'desc';
 

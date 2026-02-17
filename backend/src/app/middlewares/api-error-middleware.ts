@@ -3,21 +3,30 @@ import { ApiException } from '../error/api-exception';
 import { ApiResponse } from '../helpers/api-response';
 
 export function apiErrorHandler(
-    error: ApiException,
+    error: ApiException | Error,
     request: Request,
     response: Response,
     next: NextFunction
 ): void {
     console.error(error);
+
+    // Check if it's an ApiException with details
     const data: Record<string, any> = {};
-    for (const [key, val] of Object.entries(error.details)) {
-        data[key] = val;
+    if (error instanceof ApiException && error.details) {
+        for (const [key, val] of Object.entries(error.details)) {
+            data[key] = val;
+        }
     }
-    response.status(error.httpCode).send(
+
+    // Determine status code and message
+    const statusCode = error instanceof ApiException ? error.httpCode : 500;
+    const message = error.message || 'Internal server error';
+
+    response.status(statusCode).send(
         new ApiResponse(
-            error.httpCode,
+            statusCode,
             data,
-            error.message
+            message
         )
     );
 }

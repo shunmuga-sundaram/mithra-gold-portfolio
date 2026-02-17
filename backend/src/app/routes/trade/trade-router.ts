@@ -38,6 +38,9 @@ export class TradeRouter implements ApiRouter {
         // GET /trades/statistics - Admin only
         this.router.get('/statistics', RequireAdmin, TradeController.getStatistics);
 
+        // GET /trades/my-trades - Authenticated member can view their own trades
+        this.router.get('/my-trades', TradeController.getMyTrades);
+
         // GET /trades/member/:memberId - Admin only (view member's trades)
         this.router.get('/member/:memberId', RequireAdmin, TradeController.getMemberTrades);
 
