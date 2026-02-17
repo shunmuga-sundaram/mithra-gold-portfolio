@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { MemberLayout } from "../../components/MemberLayout";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
-import { TrendingDown, Loader2, AlertCircle } from "lucide-react";
+import { TrendingDown, Loader2, AlertCircle, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router";
 import tradeService, { Trade, TradeType, TradeStatus } from "../../../services/tradeService";
 
@@ -85,7 +85,12 @@ export function MemberTransactions() {
   return (
     <MemberLayout>
       <div className="space-y-4 pb-20">
-        <h2 className="text-2xl font-bold text-gray-900">Transaction History</h2>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/member")} className="hover:bg-blue-100">
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <h2 className="text-2xl font-bold text-gray-900">Transaction History</h2>
+        </div>
 
         {trades.length === 0 ? (
           <Card className="border-2">
