@@ -250,6 +250,88 @@ If you have any questions or need assistance, please contact us at ${supportEmai
   }
 
   /**
+   * SEND PASSWORD RESET EMAIL
+   *
+   * Sends email with password reset link to member
+   *
+   * @param memberEmail - Member's email address
+   * @param memberName - Member's name
+   * @param resetToken - Password reset token
+   * @returns Promise<boolean> - true if sent successfully
+   */
+  async sendPasswordResetEmail(
+    memberEmail: string,
+    memberName: string,
+    resetToken: string
+  ): Promise<boolean> {
+    if (!this.isConfigured || !this.transporter) {
+      console.warn('⚠️  Email service not configured. Skipping password reset email.');
+      return false;
+    }
+
+    try {
+      const emailHtml = this.generatePasswordResetEmailTemplate(memberName, resetToken);
+      const emailText = this.generatePasswordResetEmailText(memberName, resetToken);
+
+      const mailOptions = {
+        from: `"${EMAIL_CONFIG.from.name}" <${EMAIL_CONFIG.from.email}>`,
+        to: memberEmail,
+        subject: 'Reset Your Password - Mithra Portfolio Tracker',
+        html: emailHtml,
+        text: emailText,
+      };
+
+      const info = await this.transporter.sendMail(mailOptions);
+      console.log('✅ Password reset email sent successfully to:', memberEmail);
+      return true;
+    } catch (error: any) {
+      console.error('❌ Failed to send password reset email:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * GENERATE PASSWORD RESET EMAIL HTML TEMPLATE
+   *
+   * Creates HTML email with reset link
+   */
+  private generatePasswordResetEmailTemplate(memberName: string, resetToken: string): string {
+    const resetUrl = `${EMAIL_CONFIG.appUrl}/reset-password?token=${resetToken}`;
+    const companyName = EMAIL_CONFIG.templates.companyName;
+
+    return `<!DOCTYPE html>
+<html><body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 40px;">
+<div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden;">
+  <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 40px; text-align: center;">
+    <h1 style="color: white; margin: 0;">Reset Your Password 🔒</h1>
+  </div>
+  <div style="padding: 40px;">
+    <p>Hi <strong>${memberName}</strong>,</p>
+    <p>We received a request to reset your password for your ${companyName} account.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${resetUrl}" style="display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">
+        Reset Password
+      </a>
+    </div>
+    <div style="padding: 15px; background-color: #fff3cd; border-left: 4px solid #ffc107; margin: 20px 0;">
+      <p style="margin: 0;">⏱️ <strong>Important:</strong> This link will expire in 15 minutes.</p>
+    </div>
+    <p style="font-size: 14px; color: #666;">If you didn't request this, please ignore this email.</p>
+  </div>
+</div></body></html>`;
+  }
+
+  /**
+   * GENERATE PASSWORD RESET EMAIL PLAIN TEXT VERSION
+   *
+   * Fallback for email clients that don't support HTML
+   */
+  private generatePasswordResetEmailText(memberName: string, resetToken: string): string {
+    const resetUrl = `${EMAIL_CONFIG.appUrl}/reset-password?token=${resetToken}`;
+    return `Reset Your Password\n\nHi ${memberName},\n\nClick this link to reset your password:\n${resetUrl}\n\n⏱️ This link expires in 15 minutes.`;
+  }
+
+  /**
    * VERIFY EMAIL CONNECTION
    *
    * Tests if SMTP connection works

@@ -63,7 +63,13 @@ npm install
 
 #### Environment Configuration
 
-Create a `.env` file in the `backend` directory:
+Create a `.env` file in the `backend` directory (or copy from `.env.example`):
+
+```bash
+cp .env.example .env
+```
+
+Then edit the `.env` file with your configuration:
 
 ```env
 # Server Configuration
@@ -82,11 +88,15 @@ JWT_REFRESH_EXPIRES_IN=90d
 # CORS Configuration
 CORS_ORIGIN=http://localhost:5173,http://localhost:5174
 
-# Email Configuration (Optional - for future features)
+# Email Configuration (Required for password reset)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
+SMTP_SECURE=false
 SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
+EMAIL_FROM_NAME=Mithra Portfolio Tracker
+EMAIL_FROM_EMAIL=noreply@mithra.com
+APP_URL=http://localhost:5174
 ```
 
 #### Start Backend Server
@@ -113,7 +123,13 @@ npm install
 
 #### Environment Configuration
 
-Create a `.env` file in the `portfolio-tracker-admin` directory:
+Create a `.env` file in the `portfolio-tracker-admin` directory (or copy from `.env.example`):
+
+```bash
+cp .env.example .env
+```
+
+The `.env` file should contain:
 
 ```env
 VITE_API_BASE_URL=http://localhost:3000
@@ -143,7 +159,13 @@ npm install
 
 #### Environment Configuration
 
-Create a `.env` file in the `portfolio-tracker-member` directory:
+Create a `.env` file in the `portfolio-tracker-member` directory (or copy from `.env.example`):
+
+```bash
+cp .env.example .env
+```
+
+The `.env` file should contain:
 
 ```env
 VITE_API_BASE_URL=http://localhost:3000
@@ -199,24 +221,94 @@ mithra/
     └── package.json
 ```
 
-## 🔑 Default Login Credentials
+## 🔑 Creating Admin Users
 
-### Admin Portal (`http://localhost:5173`)
-You need to create an admin account first. You can do this via MongoDB or create a seed script.
+Before you can use the admin portal, you need to create at least one admin user. There are two methods:
 
-**Example Admin Document:**
-```javascript
-{
-  name: "Admin User",
-  email: "admin@mithra.com",
-  password: "Admin@123", // Will be hashed
-  isActive: true,
-  role: "admin"
-}
+### Method 1: Interactive Script (Recommended for Development)
+
+Run the interactive admin creation script:
+
+```bash
+cd backend
+npm run create-admin
 ```
 
-### Member Portal (`http://localhost:5174`)
-Members are created by admins through the admin portal.
+You'll be prompted to enter:
+- Admin name
+- Admin email
+- Admin password (min 8 chars with uppercase, lowercase, number, special char)
+- Confirm password
+- Role (admin or super_admin)
+
+**Example:**
+```
+Enter admin name: John Doe
+Enter admin email: admin@mithra.com
+Enter admin password: Admin@123
+Confirm password: Admin@123
+Enter role (admin/super_admin) [default: admin]: admin
+```
+
+### Method 2: Environment Variables (Recommended for Production/CI-CD)
+
+For automated deployments or production setup, use environment variables:
+
+**Option A: Command line**
+```bash
+cd backend
+ADMIN_NAME="John Doe" \
+ADMIN_EMAIL="admin@mithra.com" \
+ADMIN_PASSWORD="Admin@123" \
+ADMIN_ROLE="admin" \
+npm run create-admin:env
+```
+
+**Option B: .env file**
+
+Add these variables to your `backend/.env` file:
+```env
+ADMIN_NAME=John Doe
+ADMIN_EMAIL=admin@mithra.com
+ADMIN_PASSWORD=Admin@123
+ADMIN_ROLE=admin
+```
+
+Then run:
+```bash
+cd backend
+npm run create-admin:env
+```
+
+### Password Requirements
+- Minimum 8 characters
+- At least 1 uppercase letter (A-Z)
+- At least 1 lowercase letter (a-z)
+- At least 1 number (0-9)
+- At least 1 special character (@$!%*?&#)
+
+**Example valid passwords:**
+- `Admin@123`
+- `SecurePass!456`
+- `MyP@ssw0rd`
+
+### Admin Roles
+- **admin**: Standard admin access (can manage members, trades, gold rates)
+- **super_admin**: Full admin access (future: can manage other admins)
+
+### Verifying Admin Creation
+
+After creating an admin, you can verify it in MongoDB:
+```bash
+mongosh
+use mithra_portfolio
+db.admins.find().pretty()
+```
+
+Or login to the admin portal at `http://localhost:5173`
+
+### Member Portal Login
+Members are created by admins through the admin portal. Members can then login at `http://localhost:5174`
 
 ## 🔐 Security Features
 
@@ -292,10 +384,12 @@ POST /auth/admin/refresh     - Refresh access token
 GET  /auth/admin/me          - Get admin profile
 POST /auth/admin/logout      - Admin logout
 
-POST /auth/member/login      - Member login
-POST /auth/member/refresh    - Refresh access token
-GET  /auth/member/me         - Get member profile
-POST /auth/member/logout     - Member logout
+POST /auth/member/login            - Member login
+POST /auth/member/refresh          - Refresh access token
+GET  /auth/member/me               - Get member profile
+POST /auth/member/logout           - Member logout
+POST /auth/member/forgot-password  - Request password reset
+POST /auth/member/reset-password   - Reset password with token
 ```
 
 ### Admin Endpoints
@@ -345,6 +439,111 @@ GET    /gold-rates/active    - Get active gold rate
 - Check if JWT secrets are set in backend `.env`
 - Verify CORS_ORIGIN includes frontend URLs
 - Clear browser localStorage and cookies
+
+## 🚀 Production Deployment
+
+### Backend Deployment Checklist
+
+1. **Environment Variables**: Set all production environment variables
+   ```env
+   NODE_ENV=production
+   MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/mithra
+   JWT_ACCESS_SECRET=<strong-random-secret>
+   JWT_REFRESH_SECRET=<strong-random-secret>
+   CORS_ORIGIN=https://admin.yourdomain.com,https://members.yourdomain.com
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=your-email@gmail.com
+   SMTP_PASS=your-app-password
+   EMAIL_FROM_NAME=Mithra Portfolio Tracker
+   EMAIL_FROM_EMAIL=noreply@yourdomain.com
+   APP_URL=https://members.yourdomain.com
+   ```
+
+2. **Build the Backend**:
+   ```bash
+   cd backend
+   npm install --production
+   npm run build
+   ```
+
+3. **Create Admin User**:
+   ```bash
+   cd backend
+   ADMIN_NAME="Admin Name" \
+   ADMIN_EMAIL="admin@yourdomain.com" \
+   ADMIN_PASSWORD="SecureP@ss123" \
+   ADMIN_ROLE="admin" \
+   npm run create-admin:env
+   ```
+
+4. **Start the Server**:
+   ```bash
+   npm start
+   ```
+
+   Or use PM2 for process management:
+   ```bash
+   npm install -g pm2
+   pm2 start build/index.js --name mithra-backend
+   pm2 save
+   pm2 startup
+   ```
+
+### Frontend Deployment
+
+1. **Admin Portal**:
+   ```bash
+   cd portfolio-tracker-admin
+
+   # Set production API URL in .env
+   echo "VITE_API_BASE_URL=https://api.yourdomain.com" > .env
+
+   # Build
+   npm install
+   npm run build
+
+   # Deploy the 'dist' folder to your hosting service
+   # (Netlify, Vercel, AWS S3, etc.)
+   ```
+
+2. **Member Portal**:
+   ```bash
+   cd portfolio-tracker-member
+
+   # Set production API URL in .env
+   echo "VITE_API_BASE_URL=https://api.yourdomain.com" > .env
+
+   # Build
+   npm install
+   npm run build
+
+   # Deploy the 'dist' folder to your hosting service
+   ```
+
+### Database Backup (Important!)
+
+Set up regular MongoDB backups:
+```bash
+# Manual backup
+mongodump --uri="mongodb+srv://user:pass@cluster.mongodb.net/mithra" --out=/path/to/backup
+
+# Restore from backup
+mongorestore --uri="mongodb+srv://user:pass@cluster.mongodb.net/mithra" /path/to/backup
+```
+
+### Security Recommendations
+
+- ✅ Use strong, random JWT secrets (minimum 64 characters)
+- ✅ Enable HTTPS for all services
+- ✅ Restrict CORS to your specific domains
+- ✅ Use MongoDB user with limited privileges
+- ✅ Enable MongoDB authentication
+- ✅ Set up firewall rules to restrict database access
+- ✅ Regularly update dependencies: `npm audit fix`
+- ✅ Use environment variables for all secrets (never commit to git)
+- ✅ Set up monitoring and logging (PM2, CloudWatch, etc.)
+- ✅ Configure rate limiting for API endpoints
 
 ## 🤝 Contributing
 

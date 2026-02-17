@@ -1,7 +1,9 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import MemberRepository from '../../models/repositories/MemberRepository';
 import { IMember } from '../../models/entities/Member';
 import { JWT_CONFIG, JWTPayload, getTokenExpiryInSeconds } from '../../config/jwt-config';
+import emailService from '../email/email-service';
 
 /**
  * Member Authentication Service
@@ -266,6 +268,132 @@ export class MemberAuthService {
             } else {
                 throw error;
             }
+        }
+    }
+
+    /**
+     * Request Password Reset
+     *
+     * Generates reset token and sends email with reset link
+     *
+     * @param email - Member's email address
+     * @returns Success message
+     * @throws Error if member not found or account is disabled
+     *
+     * Flow:
+     * 1. Find member by email
+     * 2. Check if member exists and is active
+     * 3. Generate random reset token
+     * 4. Set token expiry (15 minutes)
+     * 5. Save token and expiry to member document
+     * 6. Send password reset email
+     * 7. Return success message
+     */
+    static async requestPasswordReset(email: string): Promise<{ message: string }> {
+        try {
+            // Step 1: Find member by email
+            const member = await MemberRepository.findByEmail(email, false);
+
+            // Step 2: Check if member exists
+            if (!member) {
+                // Don't reveal if email exists (security best practice)
+                // Return success message even if email doesn't exist
+                return {
+                    message: 'If an account with that email exists, a password reset link has been sent.',
+                };
+            }
+
+            // Check if account is active
+            if (!member.isActive) {
+                throw new Error('Account is disabled. Please contact the administrator.');
+            }
+
+            // Step 3: Generate random reset token (32 bytes = 64 hex characters)
+            const resetToken = crypto.randomBytes(32).toString('hex');
+
+            // Step 4: Set token expiry (15 minutes from now)
+            const resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+            // Step 5: Save token and expiry to member document
+            member.resetPasswordToken = resetToken;
+            member.resetPasswordExpires = resetPasswordExpires;
+            await member.save();
+
+            // Step 6: Send password reset email
+            const emailSent = await emailService.sendPasswordResetEmail(
+                member.email,
+                member.name,
+                resetToken
+            );
+
+            if (!emailSent) {
+                console.warn('⚠️  Password reset email could not be sent, but token was saved');
+            }
+
+            // Step 7: Return success message
+            return {
+                message: 'If an account with that email exists, a password reset link has been sent.',
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Reset Password
+     *
+     * Validates reset token and updates member password
+     *
+     * @param token - Reset token from email
+     * @param newPassword - New password to set
+     * @returns Success message
+     * @throws Error if token is invalid, expired, or member not found
+     *
+     * Flow:
+     * 1. Find member by reset token
+     * 2. Check if member exists
+     * 3. Check if token is expired
+     * 4. Update password (will be auto-hashed by pre-save hook)
+     * 5. Clear reset token and expiry
+     * 6. Save member document
+     * 7. Return success message
+     */
+    static async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+        try {
+            // Step 1: Find member by reset token (need to include token field)
+            const member = await MemberRepository.findByResetToken(token);
+
+            // Step 2: Check if member exists
+            if (!member) {
+                throw new Error('Invalid or expired reset token');
+            }
+
+            // Step 3: Check if token is expired
+            if (!member.resetPasswordExpires || member.resetPasswordExpires < new Date()) {
+                throw new Error('Reset token has expired. Please request a new one.');
+            }
+
+            // Check if account is active
+            if (!member.isActive) {
+                throw new Error('Account is disabled. Please contact the administrator.');
+            }
+
+            // Step 4: Update password (will be auto-hashed by Member model pre-save hook)
+            member.password = newPassword;
+
+            // Step 5: Clear reset token and expiry
+            member.resetPasswordToken = undefined;
+            member.resetPasswordExpires = undefined;
+
+            // Step 6: Save member document
+            await member.save();
+
+            // Step 7: Return success message
+            return {
+                message: 'Password has been reset successfully. You can now login with your new password.',
+            };
+        } catch (error) {
+            throw error;
         }
     }
 }

@@ -109,6 +109,39 @@ const authService = {
   },
 
   /**
+   * Request password reset
+   *
+   * Sends password reset email to member
+   *
+   * @param email - Member's email address
+   * @returns Success message
+   */
+  forgotPassword: async (email: string): Promise<{ success: boolean; message: string }> => {
+    const response = await api.post<{ success: boolean; message: string }>(
+      '/auth/member/forgot-password',
+      { email }
+    );
+    return response.data;
+  },
+
+  /**
+   * Reset password with token
+   *
+   * Resets member's password using reset token from email
+   *
+   * @param token - Reset token from email
+   * @param newPassword - New password
+   * @returns Success message
+   */
+  resetPassword: async (token: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
+    const response = await api.post<{ success: boolean; message: string }>(
+      '/auth/member/reset-password',
+      { token, newPassword }
+    );
+    return response.data;
+  },
+
+  /**
    * Logout member
    *
    * Clears tokens from localStorage and calls logout endpoint

@@ -282,6 +282,35 @@ export class MemberRepository {
   }
 
   /**
+   * FIND BY RESET TOKEN
+   *
+   * Get member by password reset token
+   *
+   * Use Cases:
+   * - Password reset verification
+   * - Validate reset token
+   *
+   * @param resetToken - Password reset token
+   * @returns Promise<IMember | null>
+   *
+   * Example:
+   * const member = await MemberRepository.findByResetToken(token);
+   * if (!member || member.resetPasswordExpires < new Date()) {
+   *   throw new Error("Invalid or expired token");
+   * }
+   */
+  static async findByResetToken(resetToken: string): Promise<IMember | null> {
+    /**
+     * FIND BY RESET TOKEN
+     *
+     * Include resetPasswordToken and resetPasswordExpires fields
+     * These fields have 'select: false' in schema, so need to explicitly include
+     */
+    return await Member.findOne({ resetPasswordToken: resetToken })
+      .select('+resetPasswordToken +resetPasswordExpires');
+  }
+
+  /**
    * CREATE MEMBER
    *
    * Add new member to database

@@ -31,6 +31,8 @@ export interface IMember extends Document {
   phone: string;
   goldHoldings: number;
   isActive: boolean;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
 
@@ -163,6 +165,31 @@ const MemberSchema = new Schema<IMember>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+
+    /**
+     * RESET PASSWORD TOKEN
+     *
+     * Token for password reset functionality
+     * - Generated when user requests password reset
+     * - Used to verify reset request
+     * - Cleared after password is reset
+     */
+    resetPasswordToken: {
+      type: String,
+      select: false, // Don't include in queries by default
+    },
+
+    /**
+     * RESET PASSWORD EXPIRY
+     *
+     * Expiration timestamp for reset token
+     * - Default: 15 minutes from token generation
+     * - Token invalid after this time
+     */
+    resetPasswordExpires: {
+      type: Date,
+      select: false, // Don't include in queries by default
     },
   },
   {

@@ -215,6 +215,118 @@ export class MemberAuthController {
     }
 
     /**
+     * Forgot Password Handler
+     *
+     * Endpoint: POST /api/auth/member/forgot-password
+     * Middleware: BodyValidationMiddleware(ForgotPasswordDto)
+     *
+     * Request Body (validated by DTO):
+     * {
+     *   "email": "member@example.com"
+     * }
+     *
+     * Success Response (200 OK):
+     * {
+     *   "success": true,
+     *   "message": "If an account with that email exists, a password reset link has been sent."
+     * }
+     *
+     * Note: For security, always return success message even if email doesn't exist
+     * This prevents email enumeration attacks
+     */
+    static async forgotPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            // Step 1: Extract email from request body
+            const { email } = req.body;
+
+            // Step 2: Call service to generate reset token and send email
+            const result = await MemberAuthService.requestPasswordReset(email);
+
+            // Step 3: Send success response
+            res.status(200).json({
+                success: true,
+                message: result.message,
+            });
+
+        } catch (error: any) {
+            console.error('❌ Forgot password error:', error.message);
+
+            // Determine status code
+            let statusCode = 500;
+            let message = 'An error occurred. Please try again later.';
+
+            if (error.message.includes('Account is disabled')) {
+                statusCode = 403;
+                message = error.message;
+            }
+
+            res.status(statusCode).json({
+                success: false,
+                message: message,
+            });
+        }
+    }
+
+    /**
+     * Reset Password Handler
+     *
+     * Endpoint: POST /api/auth/member/reset-password
+     * Middleware: BodyValidationMiddleware(ResetPasswordDto)
+     *
+     * Request Body (validated by DTO):
+     * {
+     *   "token": "abc123...",
+     *   "newPassword": "NewSecurePass@123"
+     * }
+     *
+     * Success Response (200 OK):
+     * {
+     *   "success": true,
+     *   "message": "Password has been reset successfully. You can now login with your new password."
+     * }
+     *
+     * Error Responses:
+     * - 400: Invalid or expired token
+     * - 403: Account disabled
+     * - 500: Server error
+     */
+    static async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            // Step 1: Extract token and new password from request body
+            const { token, newPassword } = req.body;
+
+            // Step 2: Call service to reset password
+            const result = await MemberAuthService.resetPassword(token, newPassword);
+
+            // Step 3: Send success response
+            res.status(200).json({
+                success: true,
+                message: result.message,
+            });
+
+        } catch (error: any) {
+            console.error('❌ Reset password error:', error.message);
+
+            // Determine status code
+            let statusCode = 500;
+            let message = 'An error occurred. Please try again later.';
+
+            if (error.message.includes('Invalid or expired')) {
+                statusCode = 400;
+                message = error.message;
+            } else if (error.message.includes('Account is disabled')) {
+                statusCode = 403;
+                message = error.message;
+            }
+
+            res.status(statusCode).json({
+                success: false,
+                message: message,
+            });
+        }
+    }
+
+    /**
      * Logout Handler
      *
      * Endpoint: POST /api/auth/member/logout

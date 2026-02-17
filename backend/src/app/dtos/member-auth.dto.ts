@@ -70,3 +70,59 @@ export class MemberRefreshTokenDto {
     @IsString({ message: 'Refresh token must be a string' })
     refreshToken: string;
 }
+
+/**
+ * Forgot Password DTO
+ *
+ * Used for: POST /api/auth/member/forgot-password
+ */
+export class ForgotPasswordDto {
+    /**
+     * Email field validation
+     *
+     * Rules:
+     * - Must be provided (IsNotEmpty)
+     * - Must be valid email format (IsEmail)
+     */
+    @IsNotEmpty({ message: 'Email is required' })
+    @IsEmail({}, { message: 'Email must be a valid email address' })
+    email: string;
+}
+
+/**
+ * Reset Password DTO
+ *
+ * Used for: POST /api/auth/member/reset-password
+ */
+export class ResetPasswordDto {
+    /**
+     * Reset Token field validation
+     *
+     * Rules:
+     * - Must be provided (IsNotEmpty)
+     * - Must be a string (IsString)
+     */
+    @IsNotEmpty({ message: 'Reset token is required' })
+    @IsString({ message: 'Reset token must be a string' })
+    token: string;
+
+    /**
+     * New Password field validation
+     *
+     * Rules:
+     * - Must be provided (IsNotEmpty)
+     * - Must be a string (IsString)
+     * - Minimum 8 characters (MinLength)
+     * - Must contain: 1 uppercase, 1 lowercase, 1 number, 1 special character (Matches)
+     */
+    @IsNotEmpty({ message: 'New password is required' })
+    @IsString({ message: 'New password must be a string' })
+    @MinLength(8, { message: 'Password must be at least 8 characters long' })
+    @Matches(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+        {
+            message: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+        }
+    )
+    newPassword: string;
+}

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { MemberAuthController } from '../../controllers/auth/member-auth-controller';
 import { BodyValidationMiddleware } from '../../middlewares/validation-middleware';
-import { MemberLoginDto, MemberRefreshTokenDto } from '../../dtos/member-auth.dto';
+import { MemberLoginDto, MemberRefreshTokenDto, ForgotPasswordDto, ResetPasswordDto } from '../../dtos/member-auth.dto';
 
 /**
  * Member Authentication Router
@@ -145,6 +145,80 @@ memberAuthRouter.post(
 memberAuthRouter.get(
     '/me',
     MemberAuthController.getProfile
+);
+
+/**
+ * POST /api/auth/member/forgot-password
+ *
+ * Forgot Password Endpoint
+ *
+ * Initiates password reset process by sending reset link to member's email.
+ *
+ * Flow:
+ * 1. Member enters email address
+ * 2. Server generates reset token (15-minute expiry)
+ * 3. Server sends email with reset link
+ * 4. Server always returns success (security: don't reveal if email exists)
+ *
+ * Middleware Chain:
+ * Request → BodyValidationMiddleware(ForgotPasswordDto) → MemberAuthController.forgotPassword → Response
+ *
+ * Example Request:
+ * POST /api/auth/member/forgot-password
+ * Body: { "email": "member@example.com" }
+ *
+ * Example Response (200):
+ * {
+ *   "success": true,
+ *   "message": "If an account with that email exists, a password reset link has been sent."
+ * }
+ */
+memberAuthRouter.post(
+    '/forgot-password',
+    BodyValidationMiddleware(ForgotPasswordDto),
+    MemberAuthController.forgotPassword
+);
+
+/**
+ * POST /api/auth/member/reset-password
+ *
+ * Reset Password Endpoint
+ *
+ * Resets member's password using reset token from email.
+ *
+ * Flow:
+ * 1. Member clicks link in email (contains token)
+ * 2. Member enters new password
+ * 3. Server validates token and expiry
+ * 4. Server updates password (auto-hashed)
+ * 5. Server clears reset token
+ *
+ * Middleware Chain:
+ * Request → BodyValidationMiddleware(ResetPasswordDto) → MemberAuthController.resetPassword → Response
+ *
+ * Example Request:
+ * POST /api/auth/member/reset-password
+ * Body: {
+ *   "token": "abc123...",
+ *   "newPassword": "NewSecurePass@123"
+ * }
+ *
+ * Example Success Response (200):
+ * {
+ *   "success": true,
+ *   "message": "Password has been reset successfully. You can now login with your new password."
+ * }
+ *
+ * Example Error Response (400):
+ * {
+ *   "success": false,
+ *   "message": "Invalid or expired reset token"
+ * }
+ */
+memberAuthRouter.post(
+    '/reset-password',
+    BodyValidationMiddleware(ResetPasswordDto),
+    MemberAuthController.resetPassword
 );
 
 /**
