@@ -133,9 +133,11 @@ api.interceptors.response.use(
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
 
-          // Redirect to login page
+          // Redirect to login page only if not already there
           // Note: We'll handle this better with Redux later
-          window.location.href = '/';
+          if (window.location.pathname !== '/') {
+            window.location.href = '/';
+          }
           break;
 
         case 403:

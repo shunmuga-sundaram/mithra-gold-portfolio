@@ -134,8 +134,17 @@ export const loginAdmin = createAsyncThunk(
       };
     } catch (error: any) {
       // If login fails, return error message
-      // rejectWithValue sends this to the rejected case in reducers
-      return rejectWithValue(error.message || 'Login failed');
+      // Check for validation errors first
+      if (error.response?.data?.details?.validationErrors) {
+        const validationErrors = error.response.data.details.validationErrors;
+        // Extract first validation error message
+        const firstError = validationErrors[0];
+        const errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+        return rejectWithValue(errorMessage);
+      }
+      // Fallback to regular error message
+      const errorMessage = error.response?.data?.message || error.message || 'Login failed';
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -165,7 +174,8 @@ export const logoutAdmin = createAsyncThunk(
       return;
     } catch (error: any) {
       // Even if API call fails, we still log out locally
-      return rejectWithValue(error.message || 'Logout failed');
+      const errorMessage = error.response?.data?.message || error.message || 'Logout failed';
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -202,7 +212,8 @@ export const getAdminProfile = createAsyncThunk(
       // If token invalid/expired, clear everything
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
-      return rejectWithValue(error.message || 'Failed to fetch profile');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch profile';
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -247,7 +258,8 @@ export const refreshAccessToken = createAsyncThunk(
       // If refresh fails, user must login again
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
-      return rejectWithValue(error.message || 'Token refresh failed');
+      const errorMessage = error.response?.data?.message || error.message || 'Token refresh failed';
+      return rejectWithValue(errorMessage);
     }
   }
 );

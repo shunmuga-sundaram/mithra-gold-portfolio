@@ -8,6 +8,7 @@ import { AuthRouter } from './auth';
 import { MemberRouter } from './member/member-router';
 import { GoldRateRouter } from './gold-rate/gold-rate-router';
 import { TradeRouter } from './trade/trade-router';
+import { StatisticsRouter } from './statistics/statistics-router';
 
 export const route = new RootRouter(
     new SampleRouter(new SampleController()),
@@ -15,5 +16,6 @@ export const route = new RootRouter(
     new AuthRouter(),
     new MemberRouter(),
     new GoldRateRouter(),
-    new TradeRouter()
+    new TradeRouter(),
+    new StatisticsRouter()
 );

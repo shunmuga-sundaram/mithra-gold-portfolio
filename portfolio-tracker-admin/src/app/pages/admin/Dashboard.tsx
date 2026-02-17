@@ -1,37 +1,149 @@
+import { useState, useEffect } from "react";
 import { AdminLayout } from "../../components/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
-import { Users, Coins, Clock, TrendingUp, Plus, DollarSign } from "lucide-react";
+import { Users, Coins, Clock, TrendingUp, Plus, DollarSign, Loader2, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router";
+import statisticsService, { DashboardStatistics } from "../../../services/statisticsService";
+import goldRateService, { GoldRate } from "../../../services/goldRateService";
+import tradeService, { Trade, TradeStatus } from "../../../services/tradeService";
 
 export function AdminDashboard() {
   const navigate = useNavigate();
 
+  const [statistics, setStatistics] = useState<DashboardStatistics | null>(null);
+  const [goldRate, setGoldRate] = useState<GoldRate | null>(null);
+  const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      // Fetch all data in parallel
+      const [stats, rate, tradesResponse] = await Promise.all([
+        statisticsService.getDashboardStatistics(),
+        goldRateService.getActiveRate(),
+        tradeService.getAllTrades(1, 5)
+      ]);
+
+      setStatistics(stats);
+      setGoldRate(rate);
+      setRecentTrades(tradesResponse.data);
+    } catch (err: any) {
+      console.error('Error loading dashboard:', err);
+      setError(err.response?.data?.message || 'Failed to load dashboard. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatINR = (value: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+    }).format(value);
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+
+    if (diffInHours < 1) {
+      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+      return diffInMinutes <= 1 ? 'Just now' : `${diffInMinutes} minutes ago`;
+    } else if (diffInHours < 24) {
+      return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
+    } else {
+      const diffInDays = Math.floor(diffInHours / 24);
+      return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
+    }
+  };
+
+  const getTradeDescription = (trade: Trade): string => {
+    const memberName = trade.memberId.name;
+    const action = trade.tradeType === 'BUY' ? 'purchased' : 'sold';
+    return `${memberName} ${action} ${trade.quantity}g @ ${formatINR(trade.rateAtTrade)}/g`;
+  };
+
+  const getStatusBadge = (status: TradeStatus) => {
+    switch (status) {
+      case TradeStatus.PENDING:
+        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800">PENDING</span>;
+      case TradeStatus.COMPLETED:
+        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">COMPLETED</span>;
+      case TradeStatus.CANCELLED:
+        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800">CANCELLED</span>;
+      default:
+        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-800">{status}</span>;
+    }
+  };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
+          <span className="ml-2 text-lg">Loading dashboard...</span>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (error || !statistics || !goldRate) {
+    return (
+      <AdminLayout>
+        <div className="p-4 bg-red-50 border-2 border-red-200 rounded-lg flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm text-red-800 font-semibold">{error || 'Failed to load dashboard data'}</p>
+          </div>
+          <Button
+            onClick={loadDashboardData}
+            className="bg-red-600 hover:bg-red-700"
+            size="sm"
+          >
+            Retry
+          </Button>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   const stats = [
     {
       title: "Total Members",
-      value: "142",
+      value: statistics.totalMembers.toString(),
       icon: Users,
       color: "text-blue-600",
       bgColor: "bg-blue-100",
     },
     {
       title: "Total Gold Holdings",
-      value: "2,845.5g",
+      value: `${statistics.totalGoldHoldings.toFixed(1)}g`,
       icon: Coins,
       color: "text-amber-600",
       bgColor: "bg-amber-100",
     },
     {
       title: "Pending Sell Requests",
-      value: "8",
+      value: statistics.pendingSellRequests.toString(),
       icon: Clock,
       color: "text-orange-600",
       bgColor: "bg-orange-100",
     },
     {
       title: "Current Buy Rate",
-      value: "₹6,550/g",
+      value: formatINR(goldRate.buyPrice) + "/g",
       icon: TrendingUp,
       color: "text-green-600",
       bgColor: "bg-green-100",
@@ -71,7 +183,7 @@ export function AdminDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold text-green-600">₹6,550.00</div>
+              <div className="text-4xl font-bold text-green-600">{formatINR(goldRate.buyPrice)}</div>
               <div className="text-green-600 mt-1">per gram</div>
             </CardContent>
           </Card>
@@ -84,7 +196,7 @@ export function AdminDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold text-orange-600">₹6,600.00</div>
+              <div className="text-4xl font-bold text-orange-600">{formatINR(goldRate.sellPrice)}</div>
               <div className="text-orange-600 mt-1">per gram</div>
             </CardContent>
           </Card>
@@ -115,19 +227,32 @@ export function AdminDashboard() {
             <CardTitle className="text-xl">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {[
-                { action: "Gold rates updated - Buy: ₹6,550/g, Sell: ₹6,600/g", time: "2 hours ago" },
-                { action: "New member registered: John Doe", time: "5 hours ago" },
-                { action: "Sell request completed for Member #142", time: "1 day ago" },
-                { action: "Buy trade created: 50g for Member #128", time: "1 day ago" },
-              ].map((activity, index) => (
-                <div key={index} className="flex justify-between items-center py-3 border-b last:border-0 hover:bg-amber-50 px-2 rounded">
-                  <span className="text-gray-700">{activity.action}</span>
-                  <span className="text-sm text-gray-500">{activity.time}</span>
-                </div>
-              ))}
-            </div>
+            {recentTrades.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>No recent trades yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recentTrades.map((trade) => (
+                  <div key={trade.id} className="flex justify-between items-center py-3 border-b last:border-0 hover:bg-amber-50 px-2 rounded">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                          trade.tradeType === 'BUY'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-orange-100 text-orange-800'
+                        }`}>
+                          {trade.tradeType}
+                        </span>
+                        {getStatusBadge(trade.status)}
+                        <span className="text-gray-700">{getTradeDescription(trade)}</span>
+                      </div>
+                    </div>
+                    <span className="text-sm text-gray-500 ml-4">{formatDate(trade.createdAt)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

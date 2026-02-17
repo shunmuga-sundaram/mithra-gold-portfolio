@@ -52,8 +52,9 @@ const goldRateService = {
      * Get current active gold rate
      */
     getActiveRate: async (): Promise<GoldRate> => {
-        const response = await api.get<GoldRate>('/gold-rates/active');
-        return response.data;
+        const response = await api.get<any>('/gold-rates/active');
+        // ApiResponse spreads properties directly, so the gold rate is in response.data
+        return response.data as GoldRate;
     },
 
     /**
