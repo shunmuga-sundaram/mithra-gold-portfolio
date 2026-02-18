@@ -10,6 +10,7 @@
  * - Mailtrap (for testing)
  */
 
+// Use getter to read env vars at runtime, not at module load time
 export const EMAIL_CONFIG = {
   /**
    * SMTP Server Settings
@@ -38,14 +39,16 @@ export const EMAIL_CONFIG = {
    * - User: your-mailtrap-username
    * - Pass: your-mailtrap-password
    */
-  smtp: {
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_USER || '',
-      pass: process.env.SMTP_PASSWORD || '',
-    },
+  get smtp() {
+    return {
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+      auth: {
+        user: process.env.SMTP_USER || '',
+        pass: process.env.SMTP_PASSWORD || '',
+      },
+    };
   },
 
   /**
@@ -53,9 +56,11 @@ export const EMAIL_CONFIG = {
    *
    * This is the "From" address that appears in emails
    */
-  from: {
-    name: process.env.EMAIL_FROM_NAME || 'Mithra Portfolio Tracker',
-    email: process.env.EMAIL_FROM_ADDRESS || process.env.SMTP_USER || 'noreply@mithra.com',
+  get from() {
+    return {
+      name: process.env.EMAIL_FROM_NAME || 'Mithra Portfolio Tracker',
+      email: process.env.EMAIL_FROM_ADDRESS || process.env.SMTP_USER || 'noreply@mithra.com',
+    };
   },
 
   /**
@@ -63,20 +68,24 @@ export const EMAIL_CONFIG = {
    *
    * Used in email templates for links
    */
-  appUrl: process.env.APP_URL || 'http://localhost:5173',
+  get appUrl() {
+    return process.env.APP_URL || 'http://localhost:5173';
+  },
 
   /**
    * Email Templates Settings
    */
-  templates: {
-    // Logo URL (optional)
-    logoUrl: process.env.EMAIL_LOGO_URL || '',
+  get templates() {
+    return {
+      // Logo URL (optional)
+      logoUrl: process.env.EMAIL_LOGO_URL || '',
 
-    // Company name
-    companyName: process.env.COMPANY_NAME || 'Mithra Portfolio Tracker',
+      // Company name
+      companyName: process.env.COMPANY_NAME || 'Mithra Portfolio Tracker',
 
-    // Support email
-    supportEmail: process.env.SUPPORT_EMAIL || 'support@mithra.com',
+      // Support email
+      supportEmail: process.env.SUPPORT_EMAIL || 'support@mithra.com',
+    };
   },
 };
 

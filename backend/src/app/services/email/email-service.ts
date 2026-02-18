@@ -14,28 +14,55 @@ import { EMAIL_CONFIG, validateEmailConfig } from '../../config/email-config';
 export class EmailService {
   private transporter: Transporter | null = null;
   private isConfigured: boolean = false;
+  private initialized: boolean = false;
 
   constructor() {
-    this.initialize();
+    // Don't initialize in constructor - let it happen lazily on first use
   }
 
   /**
    * INITIALIZE EMAIL TRANSPORTER
    *
    * Creates nodemailer transporter with SMTP configuration
+   * Called lazily on first use
    */
   private initialize(): void {
+    if (this.initialized) {
+      console.log('📧 [EMAIL] Already initialized, skipping...');
+      return; // Already initialized
+    }
+
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📧 [EMAIL] Initializing email service...');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    this.initialized = true;
+
     const { isValid, errors } = validateEmailConfig();
 
+    console.log('📧 [EMAIL] Configuration validation:');
+    console.log('   - SMTP Host:', EMAIL_CONFIG.smtp.host);
+    console.log('   - SMTP Port:', EMAIL_CONFIG.smtp.port);
+    console.log('   - SMTP Secure:', EMAIL_CONFIG.smtp.secure);
+    console.log('   - SMTP User:', EMAIL_CONFIG.smtp.auth.user);
+    console.log('   - SMTP Pass:', EMAIL_CONFIG.smtp.auth.pass ? '***' + EMAIL_CONFIG.smtp.auth.pass.slice(-4) : 'NOT SET');
+    console.log('   - From Name:', EMAIL_CONFIG.from.name);
+    console.log('   - From Email:', EMAIL_CONFIG.from.email);
+    console.log('   - App URL:', EMAIL_CONFIG.appUrl);
+
     if (!isValid) {
-      console.warn('⚠️  Email service not configured properly:');
+      console.warn('⚠️  [EMAIL] Email service not configured properly:');
       errors.forEach((error) => console.warn(`   - ${error}`));
       console.warn('   Emails will not be sent. Configure SMTP settings in .env');
       this.isConfigured = false;
       return;
     }
 
+    console.log('✅ [EMAIL] Configuration validation passed');
+
     try {
+      console.log('📧 [EMAIL] Creating nodemailer transporter...');
+
       this.transporter = nodemailer.createTransport({
         host: EMAIL_CONFIG.smtp.host,
         port: EMAIL_CONFIG.smtp.port,
@@ -44,12 +71,17 @@ export class EmailService {
           user: EMAIL_CONFIG.smtp.auth.user,
           pass: EMAIL_CONFIG.smtp.auth.pass,
         },
+        debug: true, // Enable debug output
+        logger: true, // Enable logger
       });
 
       this.isConfigured = true;
-      console.log('✅ Email service initialized successfully');
+      console.log('✅ [EMAIL] Email service initialized successfully');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     } catch (error) {
-      console.error('❌ Failed to initialize email service:', error);
+      console.error('❌ [EMAIL] Failed to initialize email service:');
+      console.error('   Error:', error);
+      console.error('   Stack:', error instanceof Error ? error.stack : 'No stack trace');
       this.isConfigured = false;
     }
   }
@@ -69,12 +101,19 @@ export class EmailService {
     memberName: string,
     password: string
   ): Promise<boolean> {
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📧 [EMAIL] Sending welcome email...');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    this.initialize(); // Lazy initialization
+
     if (!this.isConfigured || !this.transporter) {
-      console.warn('⚠️  Email service not configured. Skipping welcome email.');
+      console.warn('⚠️  [EMAIL] Email service not configured. Skipping welcome email.');
       return false;
     }
 
     try {
+      console.log('📧 [EMAIL] Preparing email content...');
       const emailHtml = this.generateWelcomeEmailTemplate(memberName, memberEmail, password);
       const emailText = this.generateWelcomeEmailText(memberName, memberEmail, password);
 
@@ -86,15 +125,38 @@ export class EmailService {
         text: emailText,
       };
 
+      console.log('📧 [EMAIL] Mail options:');
+      console.log('   - From:', mailOptions.from);
+      console.log('   - To:', mailOptions.to);
+      console.log('   - Subject:', mailOptions.subject);
+      console.log('   - HTML length:', emailHtml.length, 'chars');
+      console.log('   - Text length:', emailText.length, 'chars');
+
+      console.log('📧 [EMAIL] Sending via SMTP...');
       const info = await this.transporter.sendMail(mailOptions);
 
-      console.log('✅ Welcome email sent successfully to:', memberEmail);
-      console.log('   Message ID:', info.messageId);
+      console.log('✅ [EMAIL] Welcome email sent successfully!');
+      console.log('   - To:', memberEmail);
+      console.log('   - Message ID:', info.messageId);
+      console.log('   - Response:', info.response);
+      console.log('   - Accepted:', info.accepted);
+      console.log('   - Rejected:', info.rejected);
+      console.log('   - Pending:', info.pending);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
       return true;
     } catch (error: any) {
-      console.error('❌ Failed to send welcome email to:', memberEmail);
-      console.error('   Error:', error.message);
+      console.error('\n❌ [EMAIL] Failed to send welcome email!');
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error('   - To:', memberEmail);
+      console.error('   - Error name:', error.name);
+      console.error('   - Error message:', error.message);
+      console.error('   - Error code:', error.code);
+      console.error('   - Error command:', error.command);
+      console.error('   - Response:', error.response);
+      console.error('   - Response code:', error.responseCode);
+      console.error('   - Stack:', error.stack);
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       return false;
     }
   }
@@ -264,12 +326,22 @@ If you have any questions or need assistance, please contact us at ${supportEmai
     memberName: string,
     resetToken: string
   ): Promise<boolean> {
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📧 [EMAIL] Sending password reset email...');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    this.initialize(); // Lazy initialization
+
     if (!this.isConfigured || !this.transporter) {
-      console.warn('⚠️  Email service not configured. Skipping password reset email.');
+      console.warn('⚠️  [EMAIL] Email service not configured. Skipping password reset email.');
       return false;
     }
 
     try {
+      console.log('📧 [EMAIL] Preparing password reset email content...');
+      const resetUrl = `${EMAIL_CONFIG.appUrl}/reset-password?token=${resetToken}`;
+      console.log('📧 [EMAIL] Reset URL:', resetUrl);
+
       const emailHtml = this.generatePasswordResetEmailTemplate(memberName, resetToken);
       const emailText = this.generatePasswordResetEmailText(memberName, resetToken);
 
@@ -281,11 +353,37 @@ If you have any questions or need assistance, please contact us at ${supportEmai
         text: emailText,
       };
 
+      console.log('📧 [EMAIL] Mail options:');
+      console.log('   - From:', mailOptions.from);
+      console.log('   - To:', mailOptions.to);
+      console.log('   - Subject:', mailOptions.subject);
+      console.log('   - Reset token (first 20 chars):', resetToken.substring(0, 20) + '...');
+
+      console.log('📧 [EMAIL] Sending via SMTP...');
       const info = await this.transporter.sendMail(mailOptions);
-      console.log('✅ Password reset email sent successfully to:', memberEmail);
+
+      console.log('✅ [EMAIL] Password reset email sent successfully!');
+      console.log('   - To:', memberEmail);
+      console.log('   - Message ID:', info.messageId);
+      console.log('   - Response:', info.response);
+      console.log('   - Accepted:', info.accepted);
+      console.log('   - Rejected:', info.rejected);
+      console.log('   - Pending:', info.pending);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
       return true;
     } catch (error: any) {
-      console.error('❌ Failed to send password reset email:', error.message);
+      console.error('\n❌ [EMAIL] Failed to send password reset email!');
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error('   - To:', memberEmail);
+      console.error('   - Error name:', error.name);
+      console.error('   - Error message:', error.message);
+      console.error('   - Error code:', error.code);
+      console.error('   - Error command:', error.command);
+      console.error('   - Response:', error.response);
+      console.error('   - Response code:', error.responseCode);
+      console.error('   - Stack:', error.stack);
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       return false;
     }
   }
@@ -339,6 +437,8 @@ If you have any questions or need assistance, please contact us at ${supportEmai
    * @returns Promise<boolean> - true if connection successful
    */
   async verifyConnection(): Promise<boolean> {
+    this.initialize(); // Lazy initialization
+
     if (!this.isConfigured || !this.transporter) {
       return false;
     }
@@ -355,4 +455,5 @@ If you have any questions or need assistance, please contact us at ${supportEmai
 }
 
 // Export singleton instance
+// Initialization happens lazily on first method call (not at module load time)
 export default new EmailService();
