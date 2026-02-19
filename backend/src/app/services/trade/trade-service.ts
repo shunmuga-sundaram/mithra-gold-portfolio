@@ -173,7 +173,10 @@ export class TradeService {
 
             // If approving SELL trade, validate member has sufficient gold
             if (statusData.status === TradeStatus.COMPLETED && trade.tradeType === TradeType.SELL) {
-                const member = await MemberRepository.findById(trade.memberId.toString());
+                const memberIdStr = typeof trade.memberId === 'object' && (trade.memberId as any)._id
+                    ? (trade.memberId as any)._id.toString()
+                    : trade.memberId.toString();
+                const member = await MemberRepository.findById(memberIdStr);
                 if (!member) {
                     throw new Error('Member not found');
                 }
@@ -198,8 +201,11 @@ export class TradeService {
 
             // Update member's goldHoldings if trade is COMPLETED
             if (statusData.status === TradeStatus.COMPLETED) {
+                const memberIdStr = typeof trade.memberId === 'object' && (trade.memberId as any)._id
+                    ? (trade.memberId as any)._id.toString()
+                    : trade.memberId.toString();
                 await this.updateMemberGoldHoldings(
-                    trade.memberId.toString(),
+                    memberIdStr,
                     trade.tradeType,
                     trade.quantity
                 );
