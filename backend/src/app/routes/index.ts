@@ -9,6 +9,7 @@ import { MemberRouter } from './member/member-router';
 import { GoldRateRouter } from './gold-rate/gold-rate-router';
 import { TradeRouter } from './trade/trade-router';
 import { StatisticsRouter } from './statistics/statistics-router';
+import { AppSettingsRouter } from './app-settings/app-settings-router';
 
 export const route = new RootRouter(
     new SampleRouter(new SampleController()),
@@ -17,5 +18,6 @@ export const route = new RootRouter(
     new MemberRouter(),
     new GoldRateRouter(),
     new TradeRouter(),
-    new StatisticsRouter()
+    new StatisticsRouter(),
+    new AppSettingsRouter()
 );
