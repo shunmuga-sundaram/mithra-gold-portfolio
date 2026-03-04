@@ -104,6 +104,7 @@ export class GoldRateRepository {
         sellPrice: number;
         createdBy: Types.ObjectId;
         effectiveDate?: Date;
+        notes?: string;
     }): Promise<IGoldRate> {
         const rate = await GoldRate.create(rateData);
 

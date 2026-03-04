@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, Min, IsOptional, IsDateString } from 'class-validator';
+import { IsNotEmpty, IsNumber, Min, IsOptional, IsDateString, IsString, MaxLength } from 'class-validator';
 
 /**
  * GOLD RATE DTOs
@@ -23,6 +23,11 @@ export class CreateGoldRateDto {
     @IsOptional()
     @IsDateString({}, { message: 'Effective date must be a valid date' })
     effectiveDate?: string;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(500, { message: 'Notes cannot exceed 500 characters' })
+    notes?: string;
 }
 
 /**

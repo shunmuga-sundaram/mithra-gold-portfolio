@@ -15,6 +15,7 @@ export interface IGoldRate extends Document {
     isActive: boolean; // Only one should be true at a time
     effectiveDate: Date; // When this rate became effective
     createdBy: Types.ObjectId; // Reference to Admin who created it
+    notes?: string; // Optional comment about the rate change
     createdAt: Date;
     updatedAt: Date;
 }
@@ -44,6 +45,11 @@ const GoldRateSchema = new Schema<IGoldRate>(
             type: Schema.Types.ObjectId,
             ref: 'Admin',
             required: [true, 'Creator is required'],
+        },
+        notes: {
+            type: String,
+            trim: true,
+            maxlength: [500, 'Notes cannot exceed 500 characters'],
         },
     },
     {

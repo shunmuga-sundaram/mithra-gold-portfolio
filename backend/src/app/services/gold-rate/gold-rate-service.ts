@@ -83,6 +83,7 @@ export class GoldRateService {
                 sellPrice: rateData.sellPrice,
                 createdBy: new Types.ObjectId(adminId),
                 effectiveDate: rateData.effectiveDate ? new Date(rateData.effectiveDate) : new Date(),
+                notes: rateData.notes,
             });
 
             return rate;
