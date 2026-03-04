@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router";
 import { Button } from "../components/ui/button";
-import { LayoutDashboard, Receipt, TrendingUp, Users, LogOut, User } from "lucide-react";
+import { LayoutDashboard, Receipt, TrendingUp, Users, LogOut, User, Settings } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { logoutAdmin, selectAdmin, selectAuthLoading } from "../../store/slices/authSlice";
 import { toast } from "sonner";
@@ -48,6 +48,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { path: "/admin/gold-rate", label: "Gold Rate", icon: TrendingUp },
     { path: "/admin/members", label: "Members", icon: Users },
     { path: "/admin/trades", label: "Trades", icon: Receipt },
+    { path: "/admin/settings", label: "Settings", icon: Settings },
   ];
 
   /**

@@ -4,6 +4,7 @@ import { AdminDashboard } from "./pages/admin/Dashboard";
 import { AdminGoldRate } from "./pages/admin/GoldRate";
 import { AdminMembers } from "./pages/admin/Members";
 import { AdminTrades } from "./pages/admin/Trades";
+import { AdminSettings } from "./pages/admin/Settings";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 /**
@@ -105,6 +106,15 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <AdminTrades />
+          </ProtectedRoute>
+        ),
+      },
+
+      {
+        path: "settings",
+        element: (
+          <ProtectedRoute>
+            <AdminSettings />
           </ProtectedRoute>
         ),
       },

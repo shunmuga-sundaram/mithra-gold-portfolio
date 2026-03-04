@@ -7,6 +7,7 @@ import { useNavigate } from "react-router";
 import goldRateService, { GoldRate } from "../../../services/goldRateService";
 import tradeService, { Trade } from "../../../services/tradeService";
 import authService from "../../../services/authService";
+import appSettingsService from "../../../services/appSettingsService";
 
 export function MemberDashboard() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export function MemberDashboard() {
   const [memberName, setMemberName] = useState<string>("");
   const [goldHoldings, setGoldHoldings] = useState<number>(0);
   const [recentTransactions, setRecentTransactions] = useState<Trade[]>([]);
+  const [showPortfolioValue, setShowPortfolioValue] = useState<boolean>(true);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -34,13 +36,15 @@ export function MemberDashboard() {
       setError("");
 
       // Fetch all data in parallel
-      const [rate, tradesResponse] = await Promise.all([
+      const [rate, tradesResponse, settings] = await Promise.all([
         goldRateService.getActiveRate(),
-        tradeService.getMyTrades(1, 3)
+        tradeService.getMyTrades(1, 3),
+        appSettingsService.getSettings(),
       ]);
 
       setGoldRate(rate);
       setRecentTransactions(tradesResponse.data);
+      setShowPortfolioValue(settings.showPortfolioValue);
 
       // Get member data from local storage
       const memberData = authService.getMemberData();
@@ -168,20 +172,22 @@ export function MemberDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-2 border-green-300 bg-gradient-to-br from-green-50 to-emerald-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-900">
-              <DollarSign className="w-6 h-6 text-green-600" />
-              Portfolio Value
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold text-green-600">{formatINR(portfolioValue)}</div>
-            <div className="text-sm text-green-700 mt-2">
-              Based on current sell price
-            </div>
-          </CardContent>
-        </Card>
+        {showPortfolioValue && (
+          <Card className="border-2 border-green-300 bg-gradient-to-br from-green-50 to-emerald-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-900">
+                <DollarSign className="w-6 h-6 text-green-600" />
+                Portfolio Value
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-4xl font-bold text-green-600">{formatINR(portfolioValue)}</div>
+              <div className="text-sm text-green-700 mt-2">
+                Based on current sell price
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Button
           size="lg"
