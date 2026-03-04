@@ -71,11 +71,14 @@ interface AuthState {
  * - If tokens exist in localStorage → restore them
  * - If no tokens → user is logged out
  */
+const storedAccessToken = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+const storedRefreshToken = localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken');
+
 const initialState: AuthState = {
-  admin: null, // Will be fetched from backend after loading tokens
-  accessToken: localStorage.getItem('accessToken'),
-  refreshToken: localStorage.getItem('refreshToken'),
-  isAuthenticated: !!localStorage.getItem('accessToken'), // !! converts to boolean
+  admin: null,
+  accessToken: storedAccessToken,
+  refreshToken: storedRefreshToken,
+  isAuthenticated: !!storedAccessToken,
   loading: false,
   error: null,
 };
@@ -113,25 +116,26 @@ const initialState: AuthState = {
  *   .catch((error) => toast.error(error.message))
  */
 export const loginAdmin = createAsyncThunk(
-  'auth/login', // Action type prefix
-  async (credentials: LoginCredentials, { rejectWithValue }) => {
+  'auth/login',
+  async (credentials: LoginCredentials & { rememberMe?: boolean }, { rejectWithValue }) => {
     try {
-      // Call authService.login (from Step 1)
-      const response = await authService.login(credentials);
+      const { rememberMe = true, ...loginCreds } = credentials;
+      const response = await authService.login(loginCreds);
 
-      // Extract data from response
       const { admin, accessToken, refreshToken } = response.data;
 
-      // Store tokens in localStorage (persist across page refreshes)
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+      // Store tokens based on rememberMe choice
+      if (rememberMe) {
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
+        localStorage.setItem('rememberMe', 'true');
+      } else {
+        sessionStorage.setItem('accessToken', accessToken);
+        sessionStorage.setItem('refreshToken', refreshToken);
+        localStorage.removeItem('rememberMe');
+      }
 
-      // Return data to be stored in Redux state
-      return {
-        admin,
-        accessToken,
-        refreshToken,
-      };
+      return { admin, accessToken, refreshToken };
     } catch (error: any) {
       // If login fails, return error message
       // Check for validation errors first
@@ -203,15 +207,15 @@ export const getAdminProfile = createAsyncThunk(
   'auth/getProfile',
   async (_, { rejectWithValue }) => {
     try {
-      // Call authService.getProfile (token auto-attached by interceptor)
       const response = await authService.getProfile();
-
-      // Return admin data to be stored in Redux
       return response.data.admin;
     } catch (error: any) {
       // If token invalid/expired, clear everything
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
+      localStorage.removeItem('rememberMe');
+      sessionStorage.removeItem('accessToken');
+      sessionStorage.removeItem('refreshToken');
       const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch profile';
       return rejectWithValue(errorMessage);
     }
@@ -308,6 +312,9 @@ const authSlice = createSlice({
       state.error = null;
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
+      localStorage.removeItem('rememberMe');
+      sessionStorage.removeItem('accessToken');
+      sessionStorage.removeItem('refreshToken');
     },
   },
   extraReducers: (builder) => {

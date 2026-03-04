@@ -71,8 +71,8 @@ const api: AxiosInstance = axios.create({
  */
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Get access token from localStorage
-    const token = localStorage.getItem('accessToken');
+    // Get access token from localStorage or sessionStorage (depending on rememberMe)
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
 
     // If token exists, attach it to request headers
     if (token) {
@@ -127,16 +127,16 @@ api.interceptors.response.use(
       switch (status) {
         case 401:
           // Unauthorized - invalid/expired token
-          console.error('Unauthorized. Please login again.');
-
-          // Clear tokens from localStorage
+          // Clear tokens from both storages
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
+          localStorage.removeItem('rememberMe');
+          sessionStorage.removeItem('accessToken');
+          sessionStorage.removeItem('refreshToken');
 
-          // Redirect to login page only if not already there
-          // Note: We'll handle this better with Redux later
+          // Redirect to login with session expired flag
           if (window.location.pathname !== '/') {
-            window.location.href = '/';
+            window.location.href = '/?expired=1';
           }
           break;
 

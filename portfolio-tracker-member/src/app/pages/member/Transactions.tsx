@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { MemberLayout } from "../../components/MemberLayout";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
-import { TrendingDown, Loader2, AlertCircle, ArrowLeft } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../../components/ui/dialog";
+import { TrendingDown, Loader2, AlertCircle, ArrowLeft, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router";
 import tradeService, { Trade, TradeType, TradeStatus } from "../../../services/tradeService";
 import goldRateService from "../../../services/goldRateService";
@@ -13,6 +14,13 @@ export function MemberTransactions() {
   const [goldSellRate, setGoldSellRate] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Sell dialog state
+  const [sellTrade, setSellTrade] = useState<Trade | null>(null);
+  const [sellNotes, setSellNotes] = useState("");
+  const [submittingSell, setSubmittingSell] = useState(false);
+  const [sellError, setSellError] = useState("");
+  const [showSellSuccess, setShowSellSuccess] = useState(false);
 
   useEffect(() => {
     loadTrades();
@@ -73,8 +81,33 @@ export function MemberTransactions() {
     }
   };
 
-  const handleSellClick = () => {
-    navigate('/member/sell-trade');
+  const handleSellClick = (trade: Trade) => {
+    setSellTrade(trade);
+    setSellNotes("");
+    setSellError("");
+  };
+
+  const handleConfirmSell = async () => {
+    if (!sellTrade) return;
+    try {
+      setSubmittingSell(true);
+      setSellError("");
+      await tradeService.createSellTrade({
+        quantity: sellTrade.quantity,
+        notes: sellNotes.trim() || undefined,
+      });
+      setSellTrade(null);
+      setShowSellSuccess(true);
+      // Refresh list after short delay
+      setTimeout(() => {
+        setShowSellSuccess(false);
+        loadTrades();
+      }, 2000);
+    } catch (err: any) {
+      setSellError(err.response?.data?.message || 'Failed to submit sell request.');
+    } finally {
+      setSubmittingSell(false);
+    }
   };
 
   if (loading) {
@@ -178,10 +211,10 @@ export function MemberTransactions() {
                       variant="outline"
                       size="lg"
                       className="w-full mt-4 h-12 border-2 border-orange-500 text-orange-700 hover:bg-orange-50 font-bold"
-                      onClick={handleSellClick}
+                      onClick={() => handleSellClick(trade)}
                     >
                       <TrendingDown className="w-5 h-5 mr-2" />
-                      INITIATE SELL TRADE
+                      SELL
                     </Button>
                   )}
                 </CardContent>
@@ -190,6 +223,106 @@ export function MemberTransactions() {
           </div>
         )}
       </div>
+      {/* Sell Confirmation Dialog */}
+      {sellTrade && (
+        <Dialog open={!!sellTrade} onOpenChange={(open) => { if (!open) setSellTrade(null); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="text-xl flex items-center gap-2">
+                <TrendingDown className="w-5 h-5 text-orange-600" />
+                Confirm Sell
+              </DialogTitle>
+              <DialogDescription>Review and confirm your sell request</DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Gold Amount</span>
+                <span className="font-bold text-amber-700">{sellTrade.quantity}g</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Buy Rate</span>
+                <span className="font-semibold text-green-700">{formatINR(sellTrade.rateAtTrade)}/g</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Current Sell Rate</span>
+                <span className="font-semibold text-orange-700">{formatINR(goldSellRate)}/g</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t">
+                <span className="font-semibold">You will receive</span>
+                <span className="font-bold text-xl text-green-600">{formatINR(sellTrade.quantity * goldSellRate)}</span>
+              </div>
+              {goldSellRate > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Profit / Loss</span>
+                  <span className={`font-bold ${(sellTrade.quantity * goldSellRate - sellTrade.totalAmount) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {(sellTrade.quantity * goldSellRate - sellTrade.totalAmount) >= 0 ? '+' : ''}
+                    {formatINR(sellTrade.quantity * goldSellRate - sellTrade.totalAmount)}
+                  </span>
+                </div>
+              )}
+
+              {/* Notes */}
+              <div className="pt-2">
+                <label className="text-sm font-medium text-gray-700 block mb-1">Notes (optional)</label>
+                <input
+                  type="text"
+                  value={sellNotes}
+                  onChange={(e) => setSellNotes(e.target.value)}
+                  placeholder="Add any notes..."
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  disabled={submittingSell}
+                />
+              </div>
+
+              {sellError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-red-800">{sellError}</p>
+                </div>
+              )}
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-xs text-yellow-800">
+                  <strong>Note:</strong> This sell request will be PENDING until admin approves it.
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter className="flex gap-2">
+              <Button variant="outline" onClick={() => setSellTrade(null)} className="flex-1" disabled={submittingSell}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmSell}
+                className="flex-1 bg-orange-600 hover:bg-orange-700"
+                disabled={submittingSell}
+              >
+                {submittingSell ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Submitting...</>
+                ) : (
+                  'Confirm Sell'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Success Dialog */}
+      <Dialog open={showSellSuccess} onOpenChange={setShowSellSuccess}>
+        <DialogContent className="max-w-sm">
+          <div className="flex flex-col items-center gap-4 py-6">
+            <div className="bg-green-100 p-4 rounded-full">
+              <CheckCircle className="w-14 h-14 text-green-600" />
+            </div>
+            <DialogTitle className="text-xl text-center">Sell Request Submitted!</DialogTitle>
+            <DialogDescription className="text-center">
+              Your sell request is pending admin approval.
+            </DialogDescription>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MemberLayout>
   );
 }

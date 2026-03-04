@@ -219,20 +219,16 @@ const authService = {
    */
   logout: async (): Promise<void> => {
     try {
-      // Optional: Call backend logout endpoint for audit logging
       await api.post('/auth/admin/logout');
-
-      // Clear tokens from localStorage
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-
-      // Redux will handle clearing admin data from state
     } catch (error: any) {
-      // Even if backend call fails, still clear tokens locally
+      console.error('Logout error:', error);
+    } finally {
+      // Clear tokens from both storages
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
-
-      console.error('Logout error:', error);
+      localStorage.removeItem('rememberMe');
+      sessionStorage.removeItem('accessToken');
+      sessionStorage.removeItem('refreshToken');
     }
   },
 };

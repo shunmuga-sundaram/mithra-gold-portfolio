@@ -68,14 +68,19 @@ const authService = {
    * @param credentials - Email and password
    * @returns Login response with member data and tokens
    */
-  login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
+  login: async (credentials: LoginCredentials, rememberMe: boolean = true): Promise<LoginResponse> => {
     const response = await api.post<LoginResponse>('/auth/member/login', credentials);
 
-    // Store tokens in localStorage
     if (response.data.success) {
-      localStorage.setItem('memberAccessToken', response.data.data.accessToken);
-      localStorage.setItem('memberRefreshToken', response.data.data.refreshToken);
-      localStorage.setItem('memberData', JSON.stringify(response.data.data.member));
+      const storage = rememberMe ? localStorage : sessionStorage;
+      storage.setItem('memberAccessToken', response.data.data.accessToken);
+      storage.setItem('memberRefreshToken', response.data.data.refreshToken);
+      storage.setItem('memberData', JSON.stringify(response.data.data.member));
+      if (rememberMe) {
+        localStorage.setItem('memberRememberMe', 'true');
+      } else {
+        localStorage.removeItem('memberRememberMe');
+      }
     }
 
     return response.data;
@@ -150,29 +155,23 @@ const authService = {
     try {
       await api.post('/auth/member/logout');
     } finally {
-      // Clear tokens even if API call fails
+      // Clear tokens from both storages
       localStorage.removeItem('memberAccessToken');
       localStorage.removeItem('memberRefreshToken');
       localStorage.removeItem('memberData');
+      localStorage.removeItem('memberRememberMe');
+      sessionStorage.removeItem('memberAccessToken');
+      sessionStorage.removeItem('memberRefreshToken');
+      sessionStorage.removeItem('memberData');
     }
   },
 
-  /**
-   * Check if member is authenticated
-   *
-   * @returns True if access token exists
-   */
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem('memberAccessToken');
+    return !!(localStorage.getItem('memberAccessToken') || sessionStorage.getItem('memberAccessToken'));
   },
 
-  /**
-   * Get stored member data
-   *
-   * @returns Member data from localStorage
-   */
   getMemberData: (): Member | null => {
-    const memberData = localStorage.getItem('memberData');
+    const memberData = localStorage.getItem('memberData') || sessionStorage.getItem('memberData');
     return memberData ? JSON.parse(memberData) : null;
   },
 };

@@ -5,6 +5,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Eye, EyeOff } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { loginAdmin, selectIsAuthenticated, selectAuthLoading, selectAuthError, clearError } from "../../store/slices/authSlice";
 
@@ -44,6 +45,8 @@ export function Login() {
    */
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   /**
    * REDUX STATE (Global State)
@@ -67,6 +70,19 @@ export function Login() {
       navigate("/admin");
     }
   }, [isAuthenticated, navigate]);
+
+  // Show session expired toast on redirect from interceptor
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('expired') === '1') {
+      toast.warning('Your session has expired. Please log in again.', {
+        duration: 5000,
+        position: 'top-center',
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', '/');
+    }
+  }, []);
 
   /**
    * DISPLAY ERROR TOAST
@@ -128,7 +144,7 @@ export function Login() {
        *
        * .unwrap() converts to regular promise so we can await
        */
-      await dispatch(loginAdmin({ email, password })).unwrap();
+      await dispatch(loginAdmin({ email, password, rememberMe })).unwrap();
 
       /**
        * SUCCESS! Login completed successfully
@@ -214,20 +230,44 @@ export function Login() {
               <Label htmlFor="password" className="text-base font-semibold">
                 Password
               </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-12 border-2 border-yellow-300 focus:border-yellow-400"
-                required
-                disabled={loading} // Disable input while loading
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-12 border-2 border-yellow-300 focus:border-yellow-400 pr-12"
+                  required
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
 
-            {/* SUBMIT BUTTON */}
-            <Button
+            {/* REMEMBER ME */}
+            <div className="flex items-center gap-2">
+              <input
+                id="rememberMe"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 accent-yellow-500 cursor-pointer"
+              />
+              <label htmlFor="rememberMe" className="text-sm text-gray-600 cursor-pointer select-none">
+                Remember me
+              </label>
+            </div>
+
+              {/* SUBMIT BUTTON */}
+              <Button
               type="submit"
               className="w-full h-14 text-xl bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 font-bold shadow-lg text-white"
               disabled={loading} // Disable button while loading
