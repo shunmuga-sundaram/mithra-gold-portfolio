@@ -235,8 +235,18 @@ export function MemberDashboard() {
                         </div>
                         <div className="mt-1 text-gray-700">{transaction.quantity}g @ {formatINR(transaction.rateAtTrade)}/g</div>
                       </div>
-                      <div className="text-right font-bold">
-                        {formatINR(transaction.totalAmount)}
+                      <div className="text-right">
+                        <div className="font-bold">{formatINR(transaction.totalAmount)}</div>
+                        {transaction.status === "COMPLETED" && transaction.tradeType === "BUY" && goldSellRate > 0 && (() => {
+                          const currentValue = transaction.quantity * goldSellRate;
+                          const isProfit = currentValue > transaction.totalAmount;
+                          const isLoss = currentValue < transaction.totalAmount;
+                          return (
+                            <div className={`text-xs font-semibold ${isProfit ? 'text-green-600' : isLoss ? 'text-red-600' : 'text-gray-500'}`}>
+                              {formatINR(currentValue)}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   ))}

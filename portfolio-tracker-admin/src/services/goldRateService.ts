@@ -12,6 +12,7 @@ export interface GoldRate {
     sellPrice: number;
     isActive: boolean;
     effectiveDate: string;
+    notes?: string;
     createdBy: {
         id: string;
         name: string;
@@ -25,6 +26,7 @@ export interface CreateGoldRateDto {
     buyPrice: number;
     sellPrice: number;
     effectiveDate?: string;
+    notes?: string;
 }
 
 export interface PaginatedGoldRates {

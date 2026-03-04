@@ -5,10 +5,12 @@ import { Button } from "../../components/ui/button";
 import { TrendingDown, Loader2, AlertCircle, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router";
 import tradeService, { Trade, TradeType, TradeStatus } from "../../../services/tradeService";
+import goldRateService from "../../../services/goldRateService";
 
 export function MemberTransactions() {
   const navigate = useNavigate();
   const [trades, setTrades] = useState<Trade[]>([]);
+  const [goldSellRate, setGoldSellRate] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -20,8 +22,12 @@ export function MemberTransactions() {
     try {
       setLoading(true);
       setError("");
-      const result = await tradeService.getMyTrades();
+      const [result, rate] = await Promise.all([
+        tradeService.getMyTrades(),
+        goldRateService.getActiveRate(),
+      ]);
       setTrades(result.data);
+      setGoldSellRate(rate.sellPrice);
     } catch (err: any) {
       console.error('Error loading trades:', err);
       setError('Failed to load transactions. Please try again.');
@@ -41,6 +47,17 @@ export function MemberTransactions() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toISOString().split('T')[0];
+  };
+
+  const getCurrentValueInfo = (trade: Trade) => {
+    const currentValue = trade.quantity * goldSellRate;
+    const diff = currentValue - trade.totalAmount;
+    const isProfit = diff > 0;
+    const isLoss = diff < 0;
+    return {
+      currentValue,
+      colorClass: isProfit ? 'text-green-700' : isLoss ? 'text-red-600' : 'text-gray-700',
+    };
   };
 
   const getStatusBadge = (status: TradeStatus) => {
@@ -139,6 +156,14 @@ export function MemberTransactions() {
                         {formatINR(trade.totalAmount)}
                       </div>
                     </div>
+                    {trade.status === TradeStatus.COMPLETED && trade.tradeType === TradeType.BUY && goldSellRate > 0 && (
+                      <div className="col-span-2 pt-2 border-t">
+                        <div className="text-xs text-gray-500 font-medium">Current Value</div>
+                        <div className={`font-bold ${getCurrentValueInfo(trade).colorClass}`}>
+                          {formatINR(getCurrentValueInfo(trade).currentValue)}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {trade.notes && (

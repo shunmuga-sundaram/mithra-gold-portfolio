@@ -13,6 +13,7 @@ import { toast } from "sonner";
 export function AdminGoldRate() {
   const [goldBuyPrice, setGoldBuyPrice] = useState("");
   const [goldSellPrice, setGoldSellPrice] = useState("");
+  const [notes, setNotes] = useState("");
   const [priceHistory, setPriceHistory] = useState<GoldRateType[]>([]);
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
@@ -75,12 +76,14 @@ export function AdminGoldRate() {
     try {
       const rateData: CreateGoldRateDto = {
         buyPrice: parseFloat(goldBuyPrice),
-        sellPrice: parseFloat(goldSellPrice)
+        sellPrice: parseFloat(goldSellPrice),
+        notes: notes.trim() || undefined,
       };
 
       await goldRateService.createRate(rateData);
 
       toast.success('Gold rates updated successfully!');
+      setNotes("");
 
       // Reload data
       await loadActiveRate();
@@ -159,6 +162,23 @@ export function AdminGoldRate() {
                 </div>
               </div>
 
+              <div className="space-y-3">
+                <Label htmlFor="notes" className="text-lg font-semibold">
+                  Notes (optional)
+                </Label>
+                <textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="e.g. Market adjustment, festival season rate..."
+                  maxLength={500}
+                  rows={3}
+                  disabled={loading}
+                  className="w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                />
+                <p className="text-xs text-gray-400 text-right">{notes.length}/500</p>
+              </div>
+
               <Button
                 type="submit"
                 size="lg"
@@ -197,6 +217,7 @@ export function AdminGoldRate() {
                         <TableHead className="font-semibold">Time</TableHead>
                         <TableHead className="font-semibold">Buy Price</TableHead>
                         <TableHead className="font-semibold">Sell Price</TableHead>
+                        <TableHead className="font-semibold">Notes</TableHead>
                         <TableHead className="font-semibold">Status</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -212,6 +233,9 @@ export function AdminGoldRate() {
                             </TableCell>
                             <TableCell className="font-medium text-orange-700">
                               {formatINR(entry.sellPrice)}
+                            </TableCell>
+                            <TableCell className="text-gray-600 max-w-[200px] truncate" title={entry.notes}>
+                              {entry.notes || <span className="text-gray-300">—</span>}
                             </TableCell>
                             <TableCell>
                               {entry.isActive && (

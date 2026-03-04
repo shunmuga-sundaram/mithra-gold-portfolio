@@ -11,11 +11,13 @@ import { Badge } from "../../components/ui/badge";
 import { Plus, Receipt, TrendingUp, TrendingDown, Loader2, Check, X } from "lucide-react";
 import tradeService, { Trade, TradeType, TradeStatus, CreateTradeDto } from "../../../services/tradeService";
 import memberService from "../../../services/memberService";
+import goldRateService from "../../../services/goldRateService";
 import { toast } from "sonner";
 
 export function AdminTrades() {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [members, setMembers] = useState<any[]>([]);
+  const [goldSellRate, setGoldSellRate] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -41,8 +43,17 @@ export function AdminTrades() {
   }, [currentPage, filterMember, filterType, filterStatus]);
 
   const loadData = async () => {
-    await Promise.all([loadTrades(), loadMembers()]);
+    await Promise.all([loadTrades(), loadMembers(), loadGoldRate()]);
     setPageLoading(false);
+  };
+
+  const loadGoldRate = async () => {
+    try {
+      const rate = await goldRateService.getActiveRate();
+      setGoldSellRate(rate.sellPrice);
+    } catch (error) {
+      console.error('Error loading gold rate:', error);
+    }
   };
 
   const loadTrades = async () => {
@@ -177,6 +188,17 @@ export function AdminTrades() {
       const errorMessage = error.response?.data?.message || 'Failed to cancel trade';
       toast.error(errorMessage);
     }
+  };
+
+  const getCurrentValueInfo = (trade: Trade) => {
+    const currentValue = trade.quantity * goldSellRate;
+    const diff = currentValue - trade.totalAmount;
+    const isProfit = diff > 0;
+    const isLoss = diff < 0;
+    return {
+      currentValue,
+      colorClass: isProfit ? 'text-green-600' : isLoss ? 'text-red-600' : 'text-gray-600',
+    };
   };
 
   const getStatusBadge = (status: TradeStatus) => {
@@ -459,6 +481,7 @@ export function AdminTrades() {
                         <TableHead className="font-semibold">Quantity</TableHead>
                         <TableHead className="font-semibold">Rate</TableHead>
                         <TableHead className="font-semibold">Total Amount</TableHead>
+                        <TableHead className="font-semibold">Current Value</TableHead>
                         <TableHead className="font-semibold">Status</TableHead>
                         <TableHead className="font-semibold">Date</TableHead>
                         <TableHead className="font-semibold">Actions</TableHead>
@@ -486,6 +509,15 @@ export function AdminTrades() {
                             </TableCell>
                             <TableCell className="font-bold">
                               {formatINR(trade.totalAmount)}
+                            </TableCell>
+                            <TableCell className="font-bold">
+                              {trade.status === TradeStatus.COMPLETED && trade.tradeType === TradeType.BUY && goldSellRate > 0 ? (
+                                <span className={getCurrentValueInfo(trade).colorClass}>
+                                  {formatINR(getCurrentValueInfo(trade).currentValue)}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
                             </TableCell>
                             <TableCell>{getStatusBadge(trade.status)}</TableCell>
                             <TableCell>
