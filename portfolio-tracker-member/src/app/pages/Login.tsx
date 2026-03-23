@@ -47,7 +47,7 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-2xl border-2 border-orange-200">
         <CardHeader className="text-center bg-gradient-to-r from-orange-500 to-orange-600 rounded-t-lg py-8">
           <CardTitle className="text-4xl text-white font-bold">Mithra Gold Portfolio</CardTitle>
@@ -138,6 +138,18 @@ export function Login() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Terms & Privacy links */}
+      <p className="text-center text-xs text-gray-400 mt-4">
+        By signing in, you agree to our{" "}
+        <Link to="/terms" className="text-orange-500 hover:underline font-medium">
+          Terms of Service
+        </Link>{" "}
+        and{" "}
+        <Link to="/privacy" className="text-orange-500 hover:underline font-medium">
+          Privacy Policy
+        </Link>
+      </p>
     </div>
   );
 }
