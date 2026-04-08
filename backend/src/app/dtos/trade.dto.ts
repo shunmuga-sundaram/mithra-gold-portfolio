@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsNumber, Min, IsOptional, IsEnum, IsMongoId } from 'class-validator';
+import { IsNotEmpty, IsString, IsNumber, Min, IsOptional, IsEnum, IsMongoId, Max } from 'class-validator';
 import { TradeType, TradeStatus } from '../models/entities/Trade';
 
 /**
@@ -27,6 +27,16 @@ export class CreateTradeDto {
     @IsOptional()
     @IsString({ message: 'Notes must be a string' })
     notes?: string;
+
+    @IsOptional()
+    @IsNumber({}, { message: 'Validity days must be a number' })
+    @Min(1, { message: 'Validity must be at least 1 day' })
+    @Max(3650, { message: 'Validity cannot exceed 3650 days' })
+    validityDays?: number;
+
+    @IsOptional()
+    @IsMongoId({ message: 'Invalid source BUY trade ID' })
+    sourceBuyTradeId?: string;
 }
 
 /**

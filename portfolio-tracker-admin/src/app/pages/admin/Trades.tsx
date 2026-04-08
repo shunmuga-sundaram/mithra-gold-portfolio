@@ -35,6 +35,7 @@ export function AdminTrades() {
     memberId: "",
     quantity: "",
     notes: "",
+    validityDays: "30",
   });
 
   // Load data on mount
@@ -108,13 +109,14 @@ export function AdminTrades() {
         tradeType: TradeType.BUY,
         quantity: parseFloat(newTrade.quantity),
         notes: newTrade.notes || undefined,
+        validityDays: parseInt(newTrade.validityDays) || 30,
       };
 
       await tradeService.createTrade(tradeData);
       toast.success('BUY trade created successfully!');
 
       // Reset form and reload
-      setNewTrade({ memberId: "", quantity: "", notes: "" });
+      setNewTrade({ memberId: "", quantity: "", notes: "", validityDays: "30" });
       setIsBuyDialogOpen(false);
       await loadTrades();
     } catch (error: any) {
@@ -142,7 +144,7 @@ export function AdminTrades() {
       toast.success('SELL trade created successfully!');
 
       // Reset form and reload
-      setNewTrade({ memberId: "", quantity: "", notes: "" });
+      setNewTrade({ memberId: "", quantity: "", notes: "", validityDays: "30" });
       setIsSellDialogOpen(false);
       await loadTrades();
     } catch (error: any) {
@@ -282,6 +284,19 @@ export function AdminTrades() {
                       required
                       placeholder="0.000"
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="buy-validity">Validity (days) *</Label>
+                    <Input
+                      id="buy-validity"
+                      type="number"
+                      min="1"
+                      max="3650"
+                      value={newTrade.validityDays}
+                      onChange={(e) => setNewTrade({ ...newTrade, validityDays: e.target.value })}
+                      required
+                    />
+                    <p className="text-xs text-gray-500">Member can SELL this trade within this many days. Default: 30 days.</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="buy-notes">Notes (optional)</Label>
@@ -482,6 +497,7 @@ export function AdminTrades() {
                         <TableHead className="font-semibold">Rate</TableHead>
                         <TableHead className="font-semibold">Total Amount</TableHead>
                         <TableHead className="font-semibold">Current Value</TableHead>
+                        <TableHead className="font-semibold">Validity</TableHead>
                         <TableHead className="font-semibold">Status</TableHead>
                         <TableHead className="font-semibold">Date</TableHead>
                         <TableHead className="font-semibold">Actions</TableHead>
@@ -518,6 +534,22 @@ export function AdminTrades() {
                               ) : (
                                 <span className="text-gray-400">—</span>
                               )}
+                            </TableCell>
+                            <TableCell>
+                              {trade.tradeType === TradeType.BUY ? (() => {
+                                const expiry = new Date(trade.createdAt);
+                                expiry.setDate(expiry.getDate() + trade.validityDays);
+                                const daysLeft = Math.ceil((expiry.getTime() - Date.now()) / 86400000);
+                                const isExpired = daysLeft <= 0;
+                                return (
+                                  <div>
+                                    <div className={`text-sm font-semibold ${isExpired ? 'text-red-600' : daysLeft <= 5 ? 'text-orange-500' : 'text-green-600'}`}>
+                                      {isExpired ? 'Expired' : `${daysLeft}d left`}
+                                    </div>
+                                    <div className="text-xs text-gray-400">{trade.validityDays}d window</div>
+                                  </div>
+                                );
+                              })() : <span className="text-gray-400">—</span>}
                             </TableCell>
                             <TableCell>{getStatusBadge(trade.status)}</TableCell>
                             <TableCell>

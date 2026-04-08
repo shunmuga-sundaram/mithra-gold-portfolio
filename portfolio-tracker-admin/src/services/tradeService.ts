@@ -46,6 +46,7 @@ export interface Trade {
         email: string;
     };
     notes?: string;
+    validityDays: number;
     createdAt: string;
     updatedAt: string;
 }
@@ -55,6 +56,7 @@ export interface CreateTradeDto {
     tradeType: TradeType;
     quantity: number;
     notes?: string;
+    validityDays?: number;
 }
 
 export interface UpdateTradeStatusDto {

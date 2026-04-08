@@ -81,6 +81,14 @@ export function MemberTransactions() {
     }
   };
 
+  const getValidityInfo = (trade: Trade) => {
+    const expiry = new Date(trade.createdAt);
+    expiry.setDate(expiry.getDate() + (trade.validityDays ?? 30));
+    const daysLeft = Math.ceil((expiry.getTime() - Date.now()) / 86400000);
+    const isExpired = daysLeft <= 0;
+    return { isExpired, daysLeft, expiry };
+  };
+
   const handleSellClick = (trade: Trade) => {
     setSellTrade(trade);
     setSellNotes("");
@@ -95,6 +103,7 @@ export function MemberTransactions() {
       await tradeService.createSellTrade({
         quantity: sellTrade.quantity,
         notes: sellNotes.trim() || undefined,
+        sourceBuyTradeId: sellTrade.id,
       });
       setSellTrade(null);
       setShowSellSuccess(true);
@@ -206,17 +215,39 @@ export function MemberTransactions() {
                     </div>
                   )}
 
-                  {trade.tradeType === TradeType.BUY && trade.status === TradeStatus.COMPLETED && (
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      className="w-full mt-4 h-12 border-2 border-orange-500 text-orange-700 hover:bg-orange-50 font-bold"
-                      onClick={() => handleSellClick(trade)}
-                    >
-                      <TrendingDown className="w-5 h-5 mr-2" />
-                      SELL
-                    </Button>
-                  )}
+                  {trade.tradeType === TradeType.BUY && trade.status === TradeStatus.COMPLETED && (() => {
+                    const { isExpired, daysLeft } = getValidityInfo(trade);
+                    return (
+                      <div className="mt-4 space-y-2">
+                        <div className={`flex items-center justify-between text-xs px-2 py-1.5 rounded-md ${
+                          isExpired
+                            ? 'bg-red-50 text-red-600'
+                            : daysLeft <= 5
+                            ? 'bg-orange-50 text-orange-600'
+                            : 'bg-green-50 text-green-700'
+                        }`}>
+                          <span className="font-medium">Sell Validity</span>
+                          <span className="font-bold">
+                            {isExpired ? 'Expired' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`}
+                          </span>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="lg"
+                          className={`w-full h-12 border-2 font-bold ${
+                            isExpired
+                              ? 'border-gray-300 text-gray-400 cursor-not-allowed opacity-50'
+                              : 'border-orange-500 text-orange-700 hover:bg-orange-50'
+                          }`}
+                          onClick={() => !isExpired && handleSellClick(trade)}
+                          disabled={isExpired}
+                        >
+                          <TrendingDown className="w-5 h-5 mr-2" />
+                          {isExpired ? 'SELL EXPIRED' : 'SELL'}
+                        </Button>
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             ))}

@@ -49,6 +49,7 @@ export interface Trade {
         email: string;
     };
     notes?: string;
+    validityDays: number;
     createdAt: string;
     updatedAt: string;
 }
@@ -74,6 +75,7 @@ export interface CreateTradeDto {
     tradeType: TradeType;
     quantity: number;
     notes?: string;
+    sourceBuyTradeId?: string;
 }
 
 const tradeService = {
@@ -105,9 +107,10 @@ const tradeService = {
     createSellTrade: async (tradeData: {
         quantity: number;
         notes?: string;
+        sourceBuyTradeId?: string;
     }): Promise<Trade> => {
-        // Get member ID from localStorage
-        const memberData = localStorage.getItem('memberData');
+        // Get member ID from localStorage or sessionStorage
+        const memberData = localStorage.getItem('memberData') || sessionStorage.getItem('memberData');
         if (!memberData) {
             throw new Error('Member data not found. Please login again.');
         }
@@ -119,6 +122,7 @@ const tradeService = {
             tradeType: TradeType.SELL,
             quantity: tradeData.quantity,
             notes: tradeData.notes,
+            sourceBuyTradeId: tradeData.sourceBuyTradeId,
         };
 
         const response = await api.post<Trade>('/trades', createDto);

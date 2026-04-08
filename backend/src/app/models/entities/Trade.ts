@@ -31,6 +31,7 @@ export interface ITrade extends Document {
     initiatedBy: Types.ObjectId; // Admin or Member who created
     approvedBy?: Types.ObjectId; // Admin who approved (for SELL)
     notes?: string; // Optional notes
+    validityDays: number; // Days from trade date during which member can sell this BUY trade
     createdAt: Date;
     updatedAt: Date;
 }
@@ -87,6 +88,11 @@ const TradeSchema = new Schema<ITrade>(
         notes: {
             type: String,
             maxlength: [500, 'Notes cannot exceed 500 characters'],
+        },
+        validityDays: {
+            type: Number,
+            default: 30,
+            min: [1, 'Validity must be at least 1 day'],
         },
     },
     {

@@ -97,6 +97,24 @@ export class TradeService {
                         `Insufficient gold holdings. Member has ${member.goldHoldings}g but trying to sell ${tradeData.quantity}g`
                     );
                 }
+
+                // Validate validity window against source BUY trade
+                if (tradeData.sourceBuyTradeId) {
+                    const sourceTrade = await TradeRepository.findById(tradeData.sourceBuyTradeId);
+                    if (!sourceTrade) {
+                        throw new Error('Source BUY trade not found');
+                    }
+                    if (sourceTrade.tradeType !== TradeType.BUY) {
+                        throw new Error('Source trade must be a BUY trade');
+                    }
+                    const expiryDate = new Date(sourceTrade.createdAt);
+                    expiryDate.setDate(expiryDate.getDate() + sourceTrade.validityDays);
+                    if (new Date() > expiryDate) {
+                        throw new Error(
+                            `Sell validity has expired. This BUY trade had a ${sourceTrade.validityDays}-day validity window that ended on ${expiryDate.toDateString()}.`
+                        );
+                    }
+                }
             }
 
             // Determine trade status
@@ -126,6 +144,9 @@ export class TradeService {
                 goldRateId: goldRate._id,
                 initiatedBy: new Types.ObjectId(initiatorId),
                 notes: tradeData.notes,
+                validityDays: tradeData.tradeType === TradeType.BUY
+                    ? (tradeData.validityDays ?? 30)
+                    : undefined,
             });
 
             // Update member's goldHoldings if trade is COMPLETED

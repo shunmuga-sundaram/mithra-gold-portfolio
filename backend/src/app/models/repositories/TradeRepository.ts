@@ -141,6 +141,7 @@ export class TradeRepository {
         goldRateId: Types.ObjectId;
         initiatedBy: Types.ObjectId;
         notes?: string;
+        validityDays?: number;
     }): Promise<ITrade> {
         const trade = await Trade.create(tradeData);
 
